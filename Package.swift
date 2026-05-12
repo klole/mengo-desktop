@@ -25,6 +25,10 @@ let package = Package(
             name: "ScreenpipeFlowTests",
             dependencies: ["ScreenpipeFlow"],
             path: "Tests/ScreenpipeFlowTests"
+        ),
+        .executableTarget(
+            name: "MengoDesktop",
+            path: "Sources/MengoDesktop"
         )
     ]
 )
