@@ -6,19 +6,16 @@ A tiny macOS menu bar app that runs [screenpipe](https://github.com/screenpipe/s
 
 In **Claude Code**, paste:
 
-> Install this for me: https://github.com/REPLACE_ME/screenpipe-menu
+> Install this for me: \<paste this repo's GitHub URL here\>
 
-Claude Code will read `CLAUDE.md`, clone, build, install to `/Applications`, launch, and tell you what to do about permissions. Total time: ~3 minutes.
+Claude Code will read `CLAUDE.md`, clone, run `install.sh`, and tell you what to do about permissions. Total time: ~3 minutes. No `sudo` required (installs into `~/Applications/`).
 
 ## Install (manual)
 
 ```bash
-git clone https://github.com/REPLACE_ME/screenpipe-menu
+git clone <this repo>
 cd screenpipe-menu
-./build.sh                                  # produces ScreenpipeMenu.app + .zip
-sudo mv ScreenpipeMenu.app /Applications/
-sudo xattr -dr com.apple.quarantine /Applications/ScreenpipeMenu.app
-open /Applications/ScreenpipeMenu.app
+./install.sh                                # build (or download release), install, launch
 ```
 
 Then grant **Screen Recording** and **Microphone** permissions when prompted (System Settings → Privacy & Security).
