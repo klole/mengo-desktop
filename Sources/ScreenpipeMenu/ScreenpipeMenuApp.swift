@@ -44,7 +44,6 @@ struct ScreenpipeMenuApp: App {
     private func iconName(for status: AppState.Status) -> String {
         switch status {
         case .idle: return "circle"
-        case .downloading: return "arrow.down.circle"
         case .starting: return "circle.dotted"
         case .recording: return "record.circle.fill"
         case .audioPaused, .visionPaused, .bothPaused: return "pause.circle.fill"
@@ -59,12 +58,6 @@ struct MenuView: View {
     var body: some View {
         Text(statusText)
             .font(.system(.body, design: .default).weight(.medium))
-
-        if case .downloading(let p) = state.status {
-            Text("\(Int(p * 100))% downloaded")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
 
         if let v = state.binaryVersion {
             Text("screenpipe v\(v)")
@@ -92,7 +85,6 @@ struct MenuView: View {
 
         if case .error = state.status {
             Button("Restart recorder") { Task { await state.restartAfterCrash() } }
-            Button("Retry download") { Task { await state.retryDownload() } }
             Divider()
         }
 
@@ -122,7 +114,6 @@ struct MenuView: View {
     private var statusText: String {
         switch state.status {
         case .idle: return "Idle"
-        case .downloading: return "Downloading screenpipe…"
         case .starting: return "Starting…"
         case .recording: return "● Recording"
         case .audioPaused: return "● Audio paused (screen recording)"

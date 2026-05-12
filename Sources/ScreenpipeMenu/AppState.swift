@@ -1,12 +1,14 @@
 import Foundation
 import Observation
+import CoreGraphics
+import AVFoundation
+import ScreenCaptureKit
 
 @Observable
 @MainActor
 final class AppState {
     enum Status: Equatable {
         case idle
-        case downloading(progress: Double)
         case starting
         case recording
         case audioPaused
@@ -47,19 +49,35 @@ final class AppState {
     // MARK: - Lifecycle
 
     func bootstrap() async {
-        status = .downloading(progress: 0)
         do {
-            let binaryURL = try await BinaryManager.ensureBinary { [weak self] p in
-                Task { @MainActor in
-                    self?.status = .downloading(progress: p)
-                }
-            }
-            self.binaryVersion = (try? String(contentsOf: BinaryManager.versionFileURL, encoding: .utf8))
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            let binaryURL = try BinaryManager.ensureBinary()
+            self.binaryVersion = BinaryManager.bundledVersion()
+            // Trigger permission dialogs for the .app FIRST, so macOS records the grants
+            // against ScreenpipeMenu. The bundled helper at Contents/Helpers/screenpipe
+            // then inherits the .app's TCC identity when spawned.
+            await requestPermissionsIfNeeded()
             await start(binaryURL: binaryURL)
         } catch {
-            print("bootstrap error: \(error)")
-            status = .error("Setup failed: \(error)")
+            status = .error("Bundled binary missing: \(error)")
+        }
+    }
+
+    private func requestPermissionsIfNeeded() async {
+        // Screen recording: SCShareableContent on macOS 14+ reliably triggers the prompt
+        // and only resolves once the user has decided. CGRequestScreenCaptureAccess is
+        // flaky on modern macOS (returns the cached state, doesn't always prompt).
+        do {
+            _ = try await SCShareableContent.excludingDesktopWindows(false,
+                                                                     onScreenWindowsOnly: true)
+        } catch {
+            print("screen capture permission request failed: \(error)")
+        }
+        // Microphone.
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .notDetermined:
+            _ = await AVCaptureDevice.requestAccess(for: .audio)
+        default:
+            break
         }
     }
 
@@ -112,28 +130,29 @@ final class AppState {
     }
 
     func resumeVision() async {
-        guard FileManager.default.isExecutableFile(atPath: BinaryManager.binaryURL.path) else {
-            status = .error("Binary missing")
-            return
-        }
         visionPaused = false
         let wasAudioPaused = audioPaused
-        await start(binaryURL: BinaryManager.binaryURL)
-        if wasAudioPaused {
-            try? await Task.sleep(for: .seconds(8))
-            await pauseAudio()
+        do {
+            let binaryURL = try BinaryManager.ensureBinary()
+            await start(binaryURL: binaryURL)
+            if wasAudioPaused {
+                try? await Task.sleep(for: .seconds(8))
+                await pauseAudio()
+            }
+        } catch {
+            status = .error("Resume failed: \(error)")
         }
     }
 
     func restartAfterCrash() async {
         recorder.stop()
         healthTask?.cancel()
-        await start(binaryURL: BinaryManager.binaryURL)
-    }
-
-    func retryDownload() async {
-        try? FileManager.default.removeItem(at: BinaryManager.appSupportDir)
-        await bootstrap()
+        do {
+            let binaryURL = try BinaryManager.ensureBinary()
+            await start(binaryURL: binaryURL)
+        } catch {
+            status = .error("Restart failed: \(error)")
+        }
     }
 
     // MARK: - Health polling

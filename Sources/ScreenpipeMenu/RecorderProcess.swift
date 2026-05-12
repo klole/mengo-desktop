@@ -29,6 +29,10 @@ final class RecorderProcess {
         proc.arguments = ["record"]
         var env = ProcessInfo.processInfo.environment
         env["SCREENPIPE_API_KEY"] = token
+        // .app processes launched via Finder get a minimal PATH that omits the user's
+        // shell paths — and screenpipe needs to find ffmpeg. Prepend common locations.
+        let existingPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(NSHomeDirectory())/.local/bin:\(NSHomeDirectory())/bin:\(existingPath)"
         proc.environment = env
         proc.standardOutput = handle
         proc.standardError = handle
