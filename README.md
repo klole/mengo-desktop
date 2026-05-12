@@ -1,68 +1,67 @@
 # ScreenpipeMenu
 
-A tiny macOS menu bar app that runs [screenpipe](https://github.com/screenpipe/screenpipe) while it's open. Local-only AI memory of your screen and mic. No Node, no Terminal — double-click and go.
+A tiny macOS menu bar app that runs [screenpipe](https://github.com/screenpipe/screenpipe) — your local AI memory of screen + mic + accessibility tree. No Node, no Terminal commands once installed. 100% local; nothing leaves your Mac.
 
-## Install (coworkers, read this)
+## Install (for coworkers — easiest way)
 
-1. Download `ScreenpipeMenu.zip` and unzip.
-2. **First launch only:** right-click `ScreenpipeMenu.app` → **Open** → click **Open** in the dialog. (macOS Gatekeeper blocks unsigned apps until you tell it once. Subsequent launches just double-click.)
-3. The first time it runs it'll download the screenpipe binary (~150 MB). The menu bar icon shows a download arrow with a percentage.
-4. macOS will ask for **Screen Recording** and **Microphone** permission. Grant both in System Settings → Privacy & Security, then quit and relaunch the app. The menu has an "Open Privacy Settings" item that jumps straight there.
-5. Recording status appears in the menu bar (top right). Click the icon for status, pause/resume, and logs.
+In **Claude Code**, paste:
 
-## Menu
+> Install this for me: https://github.com/REPLACE_ME/screenpipe-menu
 
-| Item | What it does |
-|---|---|
-| **Pause audio / Resume audio** | Stops the microphone capture without restarting. Resumes instantly. |
-| **Pause screen / Resume screen** | Stops the recorder entirely. Resume takes ~15s (re-loads ML models). |
-| **Open data folder** | `~/.screenpipe` — everything screenpipe stores, local. |
-| **Open log file** | `~/Library/Logs/ScreenpipeMenu/recorder.log` |
-| **Open Privacy Settings** | Fast path to the macOS panel for granting Screen Recording. |
-| **Restart recorder / Retry download** | Shown only on errors. |
-| **Quit** | Stops recording and exits cleanly. |
+Claude Code will read `CLAUDE.md`, clone, build, install to `/Applications`, launch, and tell you what to do about permissions. Total time: ~3 minutes.
 
-## Build from source
-
-Requires Xcode 16+ / Swift 6.0+, macOS 15 (Sequoia) or later.
+## Install (manual)
 
 ```bash
-git clone <this repo> ScreenpipeMenu
-cd ScreenpipeMenu
-./build.sh
-open ScreenpipeMenu.app
+git clone https://github.com/REPLACE_ME/screenpipe-menu
+cd screenpipe-menu
+./build.sh                                  # produces ScreenpipeMenu.app + .zip
+sudo mv ScreenpipeMenu.app /Applications/
+sudo xattr -dr com.apple.quarantine /Applications/ScreenpipeMenu.app
+open /Applications/ScreenpipeMenu.app
 ```
 
-`build.sh` produces:
-- `ScreenpipeMenu.app` — runnable on this Mac
-- `ScreenpipeMenu.zip` — the shareable artifact for coworkers
+Then grant **Screen Recording** and **Microphone** permissions when prompted (System Settings → Privacy & Security).
 
-Run tests with `swift test`.
+## Requirements
+
+- macOS 15 (Sequoia) or later
+- Apple Silicon (arm64) for pre-built releases — Intel Macs need to rebuild from source
+- Xcode 16+ / Swift 6 (only if building from source)
+
+## What it does
+
+Once running, it sits in your menu bar as **● Recording**. Click to:
+- Pause / resume audio (without restarting the recorder)
+- Pause / resume screen capture
+- Open your data folder (`~/.screenpipe`)
+- Open the log file
+- Open Privacy Settings (one-click to where you grant permissions)
+
+The data is queryable via Claude Code's MCP integration — `claude mcp add screenpipe ...` to enable, then ask Claude things like *"what was I working on 30 minutes ago?"* or *"summarize today's meetings"*.
 
 ## Specs
 
-- macOS 15+ (Sequoia)
-- Universal binary (arm64 + x86_64)
-- ~150 MB binary download on first launch (cached to `~/Library/Application Support/ScreenpipeMenu/`)
+- ~150 MB on disk (the recorder binary + ML models for Parakeet ASR are bundled)
 - 5–10% CPU, 0.5–3 GB RAM while recording
-- ~20 GB / month storage (configurable in screenpipe itself, see `~/.screenpipe/`)
-- 100% local; nothing leaves the Mac
+- ~20 GB/month of recordings (configurable in screenpipe's defaults; data dir is `~/.screenpipe`)
+- All processing is on-device. Audio transcription uses Parakeet (NVIDIA OSS, English-only) on Apple Silicon's GPU via MLX.
 
-## How it works
+## Build from source / developer setup
 
-```
-ScreenpipeMenu.app launches
-   └─ downloads screenpipe binary from npm registry (first run only)
-   └─ spawns: ~/Library/Application Support/ScreenpipeMenu/bin/screenpipe record
-              ↓ (env: SCREENPIPE_API_KEY=<random>)
-              ↓ HTTP API on 127.0.0.1:3030
-   └─ polls /health every 5s
-   └─ menu shows status; pause audio = POST /audio/stop
-                          pause screen = SIGTERM the recorder
+```bash
+./bootstrap-cert.sh   # one-time: creates a self-signed cert in your keychain for stable signing
+./build.sh            # produces ScreenpipeMenu.app and ScreenpipeMenu.zip
 ```
 
-Quitting the app sends SIGTERM to the recorder (3s grace, then SIGKILL). If the .app is force-quit by macOS, `applicationWillTerminate` still runs the same cleanup.
+`bootstrap-cert.sh` is optional but recommended for active development — without it, every rebuild has a new code hash and macOS will re-prompt for Screen Recording permission. With the stable cert, you grant once and it sticks across rebuilds.
+
+## How the embedded recorder works
+
+`build.sh` downloads the screenpipe binary at build time from npmjs.org, embeds it under `Contents/Helpers/`, and codesigns the whole bundle with a matching identifier. macOS then attributes the spawned recorder's TCC checks (Screen Recording, Microphone) to ScreenpipeMenu.app instead of treating it as a separate process — which is what lets one permission grant cover the whole thing.
+
+The .app launches the recorder as a child process and talks to it on `http://127.0.0.1:3030`. When the .app quits, the recorder gets SIGTERM (then SIGKILL after 3 s).
 
 ## License
 
-Same as [screenpipe](https://github.com/screenpipe/screenpipe) (MIT). This wrapper is unaffiliated with the upstream project.
+MIT. Unaffiliated with the upstream screenpipe project.
