@@ -100,6 +100,35 @@ final class ManifestWriterTests: XCTestCase {
         XCTAssertEqual(ctx?["userFeedback"] as? String, "Rename it to bar")
     }
 
+    func testNilUserHintsSerializeAsJSONNull() throws {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        var session = RecordingSession(mode: .proactive,
+                                       bufferRangeStart: nil,
+                                       activeRecordingStart: start)
+        session.endTime = start.addingTimeInterval(20)
+
+        let url = try ManifestWriter.write(
+            session: session,
+            outputDir: URL(fileURLWithPath: "/x"),
+            userHintsName: nil,
+            userHintsDescription: nil,
+            userHintsNotes: nil,
+            regenerationContext: nil,
+            manifestsDir: tmpDir
+        )
+        let raw = try String(contentsOf: url, encoding: .utf8)
+        // Confirm all three hint values are JSON null (not "Optional(...)" garbage or absent).
+        XCTAssertTrue(raw.contains("\"name\" : null"))
+        XCTAssertTrue(raw.contains("\"description\" : null"))
+        XCTAssertTrue(raw.contains("\"notes\" : null"))
+        // Confirm the JSON parses back into NSNull for each key.
+        let json = try JSONSerialization.jsonObject(with: Data(raw.utf8)) as! [String: Any]
+        let hints = json["userHints"] as! [String: Any]
+        XCTAssertTrue(hints["name"] is NSNull)
+        XCTAssertTrue(hints["description"] is NSNull)
+        XCTAssertTrue(hints["notes"] is NSNull)
+    }
+
     func testManifestFilenameIsUUIDJson() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         var session = RecordingSession(mode: .proactive,

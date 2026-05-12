@@ -32,15 +32,13 @@ enum ManifestWriter {
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime]
 
-        var hints: [String: Any] = [
-            "name": userHintsName as Any,
-            "description": userHintsDescription as Any,
-            "notes": userHintsNotes as Any
+        // `nil as Any` wraps the Optional, which JSONSerialization can't encode.
+        // Map missing strings to NSNull explicitly so they serialize as JSON `null`.
+        let hints: [String: Any] = [
+            "name": userHintsName.map { $0 as Any } ?? NSNull(),
+            "description": userHintsDescription.map { $0 as Any } ?? NSNull(),
+            "notes": userHintsNotes.map { $0 as Any } ?? NSNull()
         ]
-        // Replace Swift nil-as-Any with explicit JSON null for stable serialization.
-        for key in ["name", "description", "notes"] where hints[key] is NSNull == false {
-            if (hints[key] as? String) == nil { hints[key] = NSNull() }
-        }
 
         var dict: [String: Any] = [
             "manifestVersion": 1,
