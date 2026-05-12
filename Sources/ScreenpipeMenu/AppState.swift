@@ -35,6 +35,8 @@ final class AppState {
         let token = RecorderProcess.newToken()
         self.recorder = RecorderProcess(token: token)
         self.api = APIClient(token: token)
+        AppDelegate.sharedState = self
+        Task { await self.bootstrap() }
     }
 
     var logFileURL: URL { recorder.logFileURL }
@@ -56,6 +58,7 @@ final class AppState {
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             await start(binaryURL: binaryURL)
         } catch {
+            print("bootstrap error: \(error)")
             status = .error("Setup failed: \(error)")
         }
     }
