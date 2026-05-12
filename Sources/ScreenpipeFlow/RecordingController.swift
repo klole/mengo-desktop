@@ -158,9 +158,18 @@ final class RecordingController {
             of: "$MANIFEST_PATH", with: manifestURL.path)
 
         do {
+            // --add-dir whitelists ~/.claude/skills (which Claude Code treats as
+            //   a sensitive-file path and would otherwise refuse to write to).
+            // --permission-mode acceptEdits auto-accepts file edits so claude -p
+            //   doesn't try to prompt for each write (which can't be answered
+            //   in headless mode anyway).
             let result = try await SynthesisRunner.run(
                 command: claude,
-                arguments: ["-p", prompt],
+                arguments: [
+                    "--add-dir", outputDir.path,
+                    "--permission-mode", "acceptEdits",
+                    "-p", prompt
+                ],
                 logFile: logURL,
                 timeoutSeconds: 300)
             switch result {
