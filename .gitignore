@@ -1,0 +1,8 @@
+.build/
+.swiftpm/
+DerivedData/
+*.xcodeproj
+ScreenpipeMenu.app/
+ScreenpipeMenu.zip
+*.dSYM
+.DS_Store
