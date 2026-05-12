@@ -10,6 +10,8 @@ struct ReviewWindow: View {
     @State private var feedbackText: String = ""
     @State private var showingRegenerateField: Bool = false
 
+    @Environment(\.dismissWindow) private var dismissWindow
+
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             // Left: rendered SKILL.md (raw markdown for V1)
@@ -110,6 +112,6 @@ struct ReviewWindow: View {
     }
 
     private func closeReviewWindow() {
-        NSApplication.shared.windows.first { $0.title == "Review" }?.close()
+        dismissWindow(id: "review")
     }
 }
