@@ -26,6 +26,7 @@ struct ScreenpipeFlowApp: App {
     @State private var hud: RecordingHUDController
 
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
 
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
@@ -44,9 +45,6 @@ struct ScreenpipeFlowApp: App {
         AppDelegate.sharedState = state
         AppDelegate.sharedController = ctrl
 
-        // Register hotkeys at init time so they're live before the user clicks anything.
-        // Closures capture the values; AppDelegate holds weak refs that we re-lookup
-        // at fire time so we never have stale references after a state reset.
         hk.register(HotkeyManager.recordToggle) {
             Task { @MainActor in
                 guard let state = AppDelegate.sharedState,
@@ -63,39 +61,67 @@ struct ScreenpipeFlowApp: App {
                 AppDelegate.sharedState?.beginBrowsingTimeline()
             }
         }
+
+        // One-shot: surface any leftover interrupted-recording marker.
+        // Runs synchronously in init — the NSAlert blocks the menu bar from
+        // appearing until dismissed, which is the desired UX.
+        if let interruptedAt = state.loadMostRecentInterruptedStart() {
+            let alert = NSAlert()
+            let fmt = DateFormatter()
+            fmt.dateStyle = .none
+            fmt.timeStyle = .medium
+            alert.messageText = "An earlier recording was interrupted"
+            alert.informativeText = """
+            ScreenpipeFlow detected that a recording started at \
+            \(fmt.string(from: interruptedAt)) was interrupted. \
+            Use "Grab last N minutes" from the menu and scroll back to \
+            that time to recover the demonstration.
+            """
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+            state.clearRecoveryMarkers()
+        }
     }
 
     var body: some Scene {
         MenuBarExtra {
             MenuView(state: appState, controller: controller)
-                .onChange(of: appState.sessionState) { _, new in
-                    handleSessionStateChange(new)
-                }
-                .task {
-                    // Post-launch one-shot: surface any interrupted-recording marker.
-                    if let interruptedAt = appState.loadMostRecentInterruptedStart() {
-                        showRecoveryPrompt(interruptedAt: interruptedAt)
-                        appState.clearRecoveryMarkers()
-                    }
-                    NotificationCenter.default.addObserver(
-                        forName: .openLibrary, object: nil, queue: .main
-                    ) { _ in
-                        Task { @MainActor in openWindow(id: "library") }
-                    }
-                }
         } label: {
-            HStack(spacing: 4) {
-                Text(StatusBarLabel.text(for: appState.sessionState))
-                Image(systemName: StatusBarLabel.iconName(for: appState.sessionState))
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(StatusBarLabel.color(for: appState.sessionState))
+            // The label is the only View that's always in the scene tree
+            // (the dropdown only exists when open). State-driven side effects
+            // therefore have to attach here: onChange and the one-time observer
+            // setup. Wrapping in a Group so modifiers attach to a stable view.
+            Group {
+                HStack(spacing: 4) {
+                    Text(StatusBarLabel.text(for: appState.sessionState))
+                    Image(systemName: StatusBarLabel.iconName(for: appState.sessionState))
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(StatusBarLabel.color(for: appState.sessionState))
+                }
+                .foregroundStyle(StatusBarLabel.color(for: appState.sessionState))
             }
-            .foregroundStyle(StatusBarLabel.color(for: appState.sessionState))
+            .onChange(of: appState.sessionState) { _, new in
+                handleSessionStateChange(new)
+            }
+            .task {
+                // Runs ONCE when the label first appears (the label is created
+                // once at app launch and lives until quit).
+                NotificationCenter.default.addObserver(
+                    forName: .openLibrary, object: nil, queue: .main
+                ) { _ in
+                    Task { @MainActor in openWindow(id: "library") }
+                }
+            }
         }
         .menuBarExtraStyle(.menu)
 
         Window("Timeline", id: "timeline") {
-            TimelineWindow(state: appState, controller: controller)
+            if case .browsingTimeline = appState.sessionState {
+                TimelineWindow(state: appState, controller: controller)
+            } else {
+                Text("Open this window from the menu (\"Grab last N minutes…\").")
+                    .padding(40)
+            }
         }
         .windowResizability(.contentSize)
 
@@ -115,37 +141,34 @@ struct ScreenpipeFlowApp: App {
     }
 
     private func handleSessionStateChange(_ new: AppState.SessionState) {
+        Logger.log("session state -> \(new)")
         switch new {
+        case .idle:
+            hud.hide()
+            dismissWindow(id: "timeline")
+            // Don't dismiss review — user may want to keep reviewing past skills.
+        case .browsingTimeline:
+            hud.hide()
+            dismissWindow(id: "review")
+            openWindow(id: "timeline")
+            NSApp.activate(ignoringOtherApps: true)
         case .recording(let session):
+            dismissWindow(id: "timeline")
+            dismissWindow(id: "review")
             hud.show(session: session) {
                 Task { @MainActor in await controller.stop() }
             }
-        case .browsingTimeline:
+        case .synthesizing:
             hud.hide()
-            openWindow(id: "timeline")
+            dismissWindow(id: "timeline")
         case .reviewing:
             hud.hide()
+            dismissWindow(id: "timeline")
             openWindow(id: "review")
             NSApp.activate(ignoringOtherApps: true)
-        default:
+        case .error:
             hud.hide()
         }
-    }
-
-    private func showRecoveryPrompt(interruptedAt: Date) {
-        let alert = NSAlert()
-        let fmt = DateFormatter()
-        fmt.dateStyle = .none
-        fmt.timeStyle = .medium
-        alert.messageText = "An earlier recording was interrupted"
-        alert.informativeText = """
-        ScreenpipeFlow detected that a recording started at \
-        \(fmt.string(from: interruptedAt)) was interrupted. \
-        Use "Grab last N minutes" from the menu and scroll back to \
-        that time to recover the demonstration.
-        """
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
     }
 }
 
