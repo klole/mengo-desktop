@@ -495,38 +495,97 @@ The automated layers catch regressions in plumbing; only the manual layer catche
 V1 (this document — implemented and shipped) is the foundation. The next two
 releases build outward in two different directions.
 
-### V2: Native macOS app — flow management + Codex + Cowork
+### V2: Mengo Desktop — unified macOS app
 
-A unified macOS app that replaces V1's menubar + windows surface, becoming the
-long-term home for flows. Records new flows (the V1 pipeline), edits existing
-ones in a visual editor, and publishes them to multiple agent runtimes.
+V2 is also a **rebrand and consolidation**. The two screenpipe-based apps from
+V1 (ScreenpipeMenu + ScreenpipeFlow) collapse into one native macOS download
+named **Mengo Desktop**, distributed from mengo.ai. Mengo Desktop is being
+built in parallel by other Claude Code sessions; this spec section is the
+roadmap reference, not an implementation guide for this codebase.
 
-**New in V2:**
+**Mengo Desktop is one app that bundles three products plus account/licensing
+glue.** Same single Screen Recording + Microphone permission grant covers
+everything inside.
 
-- **N8N-style visual flow editor.** Renders `flow.json`'s `steps` array as a
-  node graph. Click a node to edit its intent, command, or screenshot. Drag to
-  reorder. Add branches/conditions. Save → updates the `flow.json` + regenerates
-  the human-readable SKILL.md.
-- **Direct in-place step editing.** V1 = re-record or regenerate the whole
-  skill. V2 = surgically fix one step without redoing everything.
-- **Codex CLI adapter.** Same synthesis pipeline (`claude -p` *or* `codex -p`),
-  but writes skill files into both `~/.claude/skills/<slug>/` (Claude Code) and
-  `~/.codex/skills/<slug>/` (Codex) in parallel. User picks the runtime per
-  flow or sets a default.
-- **Cowork integration.** Skills publishable as Cowork plugins so the user's
-  team can install them. Mechanism: ScreenpipeFlow V2 writes a plugin wrapper
-  at `~/.claude/plugins/local/screenpipeflow-flows/<version>/` containing a
-  `.claude-plugin/plugin.json` manifest and the skill in its `skills/`
-  subdirectory. Cowork discovers it via the same path it uses for other
-  plugins. (Verify exact format via `/anthropic-skills:setup-cowork` before
-  building.)
-- **Replay verification.** After a skill executes, the runtime compares the
-  detected end-state against the demonstrated one and surfaces mismatches.
-- **Library scale.** Tags, search, per-flow version history, last-run status.
+#### Three products inside Mengo Desktop
+
+1. **Mengo Memory** *(successor to ScreenpipeMenu — Tool 1)*
+   - The always-on layer. OCR's the screen, transcribes mic audio on-device
+     via Parakeet on Apple Silicon GPU, and captures the macOS accessibility
+     tree into a local SQLite store + local vector index.
+   - Menu bar surface: ● Recording status, pause/resume audio, pause/resume
+     screen, open data folder, open logs, jump to Privacy settings, quit.
+   - Powers private recall ("what was that staging URL I saw Tuesday?") and
+     is the data source Mengo Flow reads from.
+
+2. **Mengo Flow** *(successor to ScreenpipeFlow — Tool 2, this document's V1)*
+   - The skill factory. Proactive + retroactive modes (unchanged from V1).
+   - Floating recording HUD; narration-driven parameter detection. The
+     synthesis prompt, manifest schema, and output format from V1 carry
+     forward as-is.
+   - Synthesis still shells out to `claude -p` or `codex -p` — no API tokens.
+     **The user picks Claude vs Codex in Settings** (see below); the chosen
+     CLI is invoked for every synthesis. A future option lets the user pick
+     per-flow.
+
+3. **Mengo Studio** *(new in V2 — the visual editor)*
+   - Node-graph editor that renders `flow.json`'s `steps` as drag/drop nodes.
+     Edit intent, command, or screenshot inline. Add branches/conditions.
+     Reorder steps. Save → regenerates the human-readable SKILL.md.
+   - **Replay**: run a flow and watch the agent execute it step by step,
+     with live status per node ("step 3: in-progress / passed / failed").
+   - **Edit-by-natural-language**: "change step 3 to use Firefox" — driven
+     by the same `regenerationContext` mechanism V1 already supports.
+
+#### Settings / preferences
+
+- **Runtime selector: Claude vs Codex.** Toggles which CLI Mengo Flow shells
+  out to for synthesis (and which `skills/` directory it writes to —
+  `~/.claude/skills/` or `~/.codex/skills/`). Reflects the user's existing
+  subscription. Default: auto-detect (Claude if present, else Codex).
+- Capture: framerate, audio enable/disable, app exclusion list.
+- Storage: prune the index, set retention window, disk-usage display.
+- Global hotkeys: rebind ⌃⌥R and ⌃⌥G.
+- MCP integration helpers: one-click setup for `screenpipe-mcp` in the
+  selected runtime.
+- Privacy: pause schedules (e.g. always-paused 6-10pm), per-app
+  blocklist (e.g. never capture 1Password).
+
+#### Cowork integration
+
+Skills publishable as Cowork plugins. Mechanism: Mengo Studio writes a
+plugin wrapper at `~/.claude/plugins/local/mengo-flows/<version>/` containing
+a `.claude-plugin/plugin.json` manifest and the skill in its `skills/`
+subdirectory. Cowork discovers it via the same path it uses for other
+plugins. (Verify exact format via `/anthropic-skills:setup-cowork` before
+building.)
+
+#### Replay verification
+
+After a skill executes via Replay (Studio), the runtime compares the detected
+end-state against the demonstrated one. Mismatches surface inline on the
+failing step — user can fix the step in the editor, re-run.
+
+#### Account & licensing
+
+- Sign in to a Mengo account; paste/manage license keys.
+- App calls `mengo.ai/api/license/validate` to determine Free vs Pro status.
+- "Upgrade to Pro" button opens web checkout (Stripe) with deep-link return.
+
+| Tier | Price | What you get |
+|---|---|---|
+| **Free** | $0 | Limited recordings, limited flow exports, local-only memory, up to 3 saved flows |
+| **Pro** | $29/mo · $299/yr | Unlimited recordings & flows, Mengo Studio (the editable flow builder), flow replay, memory search, local vector indexing, MCP integrations, Claude & Codex export, cloud sync (post-V2), priority support |
+
+#### Distribution
+
+macOS 15 (Sequoia)+, Apple Silicon. Direct download from mengo.ai, ad-hoc
+signed — not the Mac App Store. (Intel + Windows on the V3 roadmap.)
 
 **Explicitly NOT in V2** (moved to V3):
 - Windows support.
 - Skill recommender / proactive suggestions.
+- Cloud sync (post-V2).
 
 ### V3: Windows + proactive skill recommender
 
@@ -560,7 +619,9 @@ together rule out "fluff":
   within a short window** (default: 7 days, configurable). Similarity scored
   by app sequence + OCR keyword overlap + (optionally) LLM embedding.
 
-**Surface:** suggestions appear in the V2 app's "Recommended" tab. Each entry
+**Surface:** Mengo Studio's "Recommended" tab. **Manually triggered by a
+"See recommended flows" button** — no background scanning, no notifications
+that pull the user in. Running the scan is the user's choice. Each entry
 shows:
 
 - One-sentence summary of the pattern ("Tuesday and Thursday you spent ~12
@@ -579,26 +640,35 @@ quantitative gate; an LLM judgment pass is the qualitative gate. **No "go to
 Amazon and buy X"-style fluff** — only patterns that actually drained time and
 recurred.
 
-**Open V3 design questions** (resolve when V3 is brainstormed):
+**Locked V3 decisions:**
 
-- Schedule vs on-demand: nightly background scan, or only when user opens the
-  "Recommended" tab?
-- Privacy: fully local analysis only, or opt-in to a hosted model for richer
-  pattern detection?
-- Cold start: how long after V3 install before the first useful suggestion
-  appears? (Probably needs 1-2 weeks of screenpipe history.)
+- **Trigger:** manual — user clicks "See recommended flows." Not scheduled,
+  not background. Keeps it cheap (no always-on CPU) and respectful (no
+  surprise notifications).
+- **Privacy:** fully local analysis only. The scan reads `~/.claude/projects/`,
+  `~/.codex/`, and screenpipe's SQLite directly. Nothing leaves the Mac. Pro
+  cloud-sync (planned post-V2) is an opt-in storage feature, not a runtime
+  for the recommender.
+- **Cold start:** the user benefits most after ~1-2 weeks of Memory history,
+  but because the trigger is manual, the recommender simply tells them
+  ("only 3 days of data so far — try again next week") instead of pretending
+  to be useful prematurely.
+
+**Open V3 design question** (still TBD when V3 is brainstormed):
+
 - Cross-source correlation: how to tie a Claude session to the screen activity
-  that surrounded it, when they happen in parallel.
+  that surrounded it, when they happen in parallel. Likely: timestamp-window
+  join with screen-activity dominant-app detection.
 
 ### What V1 already seeds for V2/V3
 
-| V1 artifact | V2 picks up | V3 picks up |
+| V1 artifact | V2 (Mengo Desktop) picks up | V3 picks up |
 |---|---|---|
-| `flow.json` schema | Visual editor renders steps as nodes | Recommender writes the same schema for accepted suggestions |
-| Separate-app architecture | V2 app replaces V1 windows wholesale, recorder (Tool 1) unchanged | Tool 1 ports to Windows independently |
-| `claude -p` synthesizer | Same recipe, just also targets `codex -p` | Same recipe, invoked from one-click "Record this now" |
-| Library window + flow index | Tagged, searchable, versioned | Same library hosts user-accepted recommendations |
-| `regenerationContext` field | Powers edit-by-natural-language from the visual editor | Powers "this suggestion is close but change X" |
+| `flow.json` schema | Mengo Studio renders steps as nodes | Recommender writes the same schema for accepted suggestions |
+| Separate-app architecture | Mengo Memory + Flow + Studio unify into one Desktop app, Memory still owns the recorder process | Memory ports to Windows independently |
+| `claude -p` synthesizer | Same recipe, switchable to `codex -p` via Settings | Same recipe, invoked from one-click "Record this now" |
+| Library window + flow index | Mengo Studio's library: tagged, searchable, versioned | Same library also hosts user-accepted recommendations |
+| `regenerationContext` field | Powers edit-by-natural-language from Studio's editor | Powers "this suggestion is close but change X" |
 | Narration-as-intent prompt | Iterated, reused | Used in reverse — recommender infers intent from observed work, then asks the user to confirm before recording |
 
 ## Open questions for the implementation plan
