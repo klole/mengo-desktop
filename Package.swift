@@ -29,6 +29,11 @@ let package = Package(
         .executableTarget(
             name: "MengoDesktop",
             path: "Sources/MengoDesktop"
+        ),
+        .testTarget(
+            name: "MengoDesktopTests",
+            dependencies: ["MengoDesktop"],
+            path: "Tests/MengoDesktopTests"
         )
     ]
 )
