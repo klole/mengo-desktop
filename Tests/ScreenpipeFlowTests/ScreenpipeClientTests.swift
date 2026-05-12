@@ -42,6 +42,29 @@ final class ScreenpipeClientTests: XCTestCase {
         XCTAssertFalse(health.isHealthy)
     }
 
+    func testThumbnailIndexRequiresToken() async {
+        // /search requires Authorization: Bearer; the client must refuse to even
+        // make the request when no token is configured (rather than silently 403ing).
+        let client = ScreenpipeClient(token: nil)
+        do {
+            _ = try await client.thumbnailIndex(from: Date().addingTimeInterval(-60),
+                                                to: Date())
+            XCTFail("expected unauthorized error")
+        } catch ScreenpipeClient.ClientError.unauthorized {
+            // expected
+        } catch {
+            XCTFail("expected .unauthorized, got \(error)")
+        }
+    }
+
+    func testParseISO8601HandlesMixedFormats() {
+        XCTAssertNotNil(ScreenpipeClient.parseISO8601("2026-05-12T14:25:00Z"))
+        XCTAssertNotNil(ScreenpipeClient.parseISO8601("2026-05-12T15:04:37-06:00"))
+        XCTAssertNotNil(ScreenpipeClient.parseISO8601("2026-05-12T15:04:37.623838-06:00"))
+        XCTAssertNotNil(ScreenpipeClient.parseISO8601("2026-05-12T15:04:37.623Z"))
+        XCTAssertNil(ScreenpipeClient.parseISO8601("not a date"))
+    }
+
     func testHealthRejectsNonJSON() {
         let payload = "not json".data(using: .utf8)!
         XCTAssertThrowsError(try ScreenpipeClient.parseHealth(payload))
@@ -83,6 +106,24 @@ final class ScreenpipeClientTests: XCTestCase {
         """.data(using: .utf8)!
         let items = try ScreenpipeClient.parseThumbnailIndex(payload)
         XCTAssertEqual(items.count, 1)
+    }
+
+    func testThumbnailIndexParsesFractionalSecondsAndTZOffset() throws {
+        // Real screenpipe output: ISO8601 with both microsecond fractional
+        // seconds AND timezone offset (e.g. -06:00). Earlier impl using only
+        // .withInternetDateTime silently dropped these.
+        let payload = """
+        {"data":[
+          {"type":"OCR","content":{"timestamp":"2026-05-12T15:04:37.623838-06:00","app_name":"Claude","window_name":""}},
+          {"type":"OCR","content":{"timestamp":"2026-05-12T22:00:00.000Z","app_name":"Slack","window_name":""}}
+        ]}
+        """.data(using: .utf8)!
+        let items = try ScreenpipeClient.parseThumbnailIndex(payload)
+        XCTAssertEqual(items.count, 2, "fractional-second timestamps must parse")
+        // 15:04:37-06:00 = 21:04:37Z (earlier) → Claude first
+        // 22:00:00Z (later) → Slack second
+        XCTAssertEqual(items[0].appName, "Claude")
+        XCTAssertEqual(items[1].appName, "Slack")
     }
 
     func testThumbnailIndexSortsByTimestampAscending() throws {
