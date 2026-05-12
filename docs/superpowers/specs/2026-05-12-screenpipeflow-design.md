@@ -38,11 +38,13 @@ This is the second of two tools in a planned pair:
 
 | Deferred to | Item |
 |---|---|
-| V2 (native cross-platform app) | N8N-style visual flow editor; direct in-place step editing. |
-| V2 | Windows support. |
-| Post-V1 | Codex CLI output adapter. |
-| Post-V1 | Multi-user / sharing / sync between machines. |
-| Post-V1 | Replay verification (skill self-checks success). |
+| V2 (native macOS app) | N8N-style visual flow editor; direct in-place step editing. |
+| V2 | Codex CLI output adapter. |
+| V2 | Cowork plugin integration. |
+| V2 | Replay verification (skill self-checks success). |
+| V3 | Windows support. |
+| V3 | Proactive skill recommender (auto-detected repeatable workflows). |
+| Out of scope | Multi-user / sharing / sync via cloud (Cowork-style team sharing is V2). |
 | Out of scope | Skill marketplace / discovery. |
 | Out of scope | Recording trimming, splicing, or editing. V1 = re-record or regenerate. |
 
@@ -488,16 +490,116 @@ The only honest answer for V1 quality. A documented checklist the developer runs
 
 The automated layers catch regressions in plumbing; only the manual layer catches "the synthesizer got worse."
 
-## V2-friendliness — seeds we plant in V1
+## Roadmap
 
-| V1 seed | What V2 picks up |
-|---|---|
-| `flow.json` structured schema | The N8N-style visual editor renders `steps` as nodes, `executionHints` as action specifics, `evidence.frameRef` as inline thumbnails. |
-| Separate-app architecture | V2's cross-platform app can replace ScreenpipeFlow entirely without disturbing Tool 1 (which keeps running as the macOS data source; Windows gets its own equivalent). |
-| `claude -p` synthesizer (no API tokens) | V2 uses the same recipe — `claude -p` and/or `codex -p` shelled out from the native app. The synthesis prompt iterates with V1. |
-| Library window + flow index | V2's "your flows" view is this, scaled up with the visual editor as the per-flow inspector. |
-| `regenerationContext` field | V2 supports edit-by-natural-language ("change step 3 to use Firefox") via the same mechanism, just from inside the visual editor. |
-| Parameter system (`{{var_name}}` substitution) | V2 surfaces parameters as input fields at invoke-time, with type hints. |
+V1 (this document — implemented and shipped) is the foundation. The next two
+releases build outward in two different directions.
+
+### V2: Native macOS app — flow management + Codex + Cowork
+
+A unified macOS app that replaces V1's menubar + windows surface, becoming the
+long-term home for flows. Records new flows (the V1 pipeline), edits existing
+ones in a visual editor, and publishes them to multiple agent runtimes.
+
+**New in V2:**
+
+- **N8N-style visual flow editor.** Renders `flow.json`'s `steps` array as a
+  node graph. Click a node to edit its intent, command, or screenshot. Drag to
+  reorder. Add branches/conditions. Save → updates the `flow.json` + regenerates
+  the human-readable SKILL.md.
+- **Direct in-place step editing.** V1 = re-record or regenerate the whole
+  skill. V2 = surgically fix one step without redoing everything.
+- **Codex CLI adapter.** Same synthesis pipeline (`claude -p` *or* `codex -p`),
+  but writes skill files into both `~/.claude/skills/<slug>/` (Claude Code) and
+  `~/.codex/skills/<slug>/` (Codex) in parallel. User picks the runtime per
+  flow or sets a default.
+- **Cowork integration.** Skills publishable as Cowork plugins so the user's
+  team can install them. Mechanism: ScreenpipeFlow V2 writes a plugin wrapper
+  at `~/.claude/plugins/local/screenpipeflow-flows/<version>/` containing a
+  `.claude-plugin/plugin.json` manifest and the skill in its `skills/`
+  subdirectory. Cowork discovers it via the same path it uses for other
+  plugins. (Verify exact format via `/anthropic-skills:setup-cowork` before
+  building.)
+- **Replay verification.** After a skill executes, the runtime compares the
+  detected end-state against the demonstrated one and surfaces mismatches.
+- **Library scale.** Tags, search, per-flow version history, last-run status.
+
+**Explicitly NOT in V2** (moved to V3):
+- Windows support.
+- Skill recommender / proactive suggestions.
+
+### V3: Windows + proactive skill recommender
+
+Cross-platform release plus a fundamentally new mode that flips the value
+proposition. Today you must remember to record. In V3 the app proactively
+notices repeatable work and suggests it.
+
+**Cross-platform parity:**
+
+- Windows port of ScreenpipeMenu (always-on recorder) and the V2 flow app.
+- Skill format unchanged — same `SKILL.md` + `flow.json` works on both
+  platforms; runtime differences hide behind the agent (Claude Code / Codex
+  abstract over the OS).
+
+**Proactive skill recommender — the V3 differentiator:**
+
+A background analyzer mines two data sources:
+
+1. **Agent session history** — Claude Code sessions at `~/.claude/projects/`
+   and Codex sessions in their equivalent path. Transcripts, tool calls,
+   files touched.
+2. **screenpipe captures** — screen, audio, accessibility tree over the same
+   time windows the agent sessions cover, plus the gaps between them.
+
+**Pattern detection** identifies high-value candidates by two filters that
+together rule out "fluff":
+
+- **Duration filter:** the task took **>5 minutes of focused work** (measured
+  by continuous app focus + interaction signals from screenpipe).
+- **Repetition filter:** the user did substantially-similar work **≥2 times
+  within a short window** (default: 7 days, configurable). Similarity scored
+  by app sequence + OCR keyword overlap + (optionally) LLM embedding.
+
+**Surface:** suggestions appear in the V2 app's "Recommended" tab. Each entry
+shows:
+
+- One-sentence summary of the pattern ("Tuesday and Thursday you spent ~12
+  minutes manually generating the weekly revenue report").
+- Why it scored — duration + frequency, with timestamps of the matched
+  sessions.
+- One-click actions: **"Record this now"** (proactive mode) or **"Capture
+  retroactively from <timestamp>"** (mode C against the historical screenpipe
+  data).
+- **Dismiss / never suggest again** — the analyzer learns from rejections.
+
+**Honesty constraint** baked into the recommender's prompt: refuse to suggest
+skills for one-off creative work, low-leverage tasks, or activities that
+genuinely shouldn't be automated. The 5-minute + repeat filter is the
+quantitative gate; an LLM judgment pass is the qualitative gate. **No "go to
+Amazon and buy X"-style fluff** — only patterns that actually drained time and
+recurred.
+
+**Open V3 design questions** (resolve when V3 is brainstormed):
+
+- Schedule vs on-demand: nightly background scan, or only when user opens the
+  "Recommended" tab?
+- Privacy: fully local analysis only, or opt-in to a hosted model for richer
+  pattern detection?
+- Cold start: how long after V3 install before the first useful suggestion
+  appears? (Probably needs 1-2 weeks of screenpipe history.)
+- Cross-source correlation: how to tie a Claude session to the screen activity
+  that surrounded it, when they happen in parallel.
+
+### What V1 already seeds for V2/V3
+
+| V1 artifact | V2 picks up | V3 picks up |
+|---|---|---|
+| `flow.json` schema | Visual editor renders steps as nodes | Recommender writes the same schema for accepted suggestions |
+| Separate-app architecture | V2 app replaces V1 windows wholesale, recorder (Tool 1) unchanged | Tool 1 ports to Windows independently |
+| `claude -p` synthesizer | Same recipe, just also targets `codex -p` | Same recipe, invoked from one-click "Record this now" |
+| Library window + flow index | Tagged, searchable, versioned | Same library hosts user-accepted recommendations |
+| `regenerationContext` field | Powers edit-by-natural-language from the visual editor | Powers "this suggestion is close but change X" |
+| Narration-as-intent prompt | Iterated, reused | Used in reverse — recommender infers intent from observed work, then asks the user to confirm before recording |
 
 ## Open questions for the implementation plan
 
