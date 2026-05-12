@@ -17,8 +17,8 @@ End state: `~/Applications/ScreenpipeMenu.app` installed, launched, and the user
 If you're not already inside this repo, clone it:
 
 ```bash
-git clone <THIS-REPO-URL>
-cd <repo-name>
+git clone https://github.com/klole/screenpipe-menu
+cd screenpipe-menu
 ```
 
 ### 2. Run the installer
