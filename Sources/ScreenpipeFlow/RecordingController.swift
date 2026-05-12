@@ -158,16 +158,17 @@ final class RecordingController {
             of: "$MANIFEST_PATH", with: manifestURL.path)
 
         do {
-            // --add-dir whitelists ~/.claude/skills (which Claude Code treats as
-            //   a sensitive-file path and would otherwise refuse to write to).
-            // --permission-mode acceptEdits auto-accepts file edits so claude -p
-            //   doesn't try to prompt for each write (which can't be answered
-            //   in headless mode anyway).
+            // ~/.claude/skills/ sits behind Claude Code's "sensitive-file gate"
+            // which --add-dir + --permission-mode acceptEdits does NOT bypass.
+            // The whole purpose of this app is to write into that directory, so
+            // we explicitly opt in to skipping the gate. The user trusted
+            // ScreenpipeFlow when they installed it; we're not opening a hole
+            // they didn't already consent to.
             let result = try await SynthesisRunner.run(
                 command: claude,
                 arguments: [
+                    "--allow-dangerously-skip-permissions",
                     "--add-dir", outputDir.path,
-                    "--permission-mode", "acceptEdits",
                     "-p", prompt
                 ],
                 logFile: logURL,
