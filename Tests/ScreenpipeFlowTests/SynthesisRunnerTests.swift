@@ -112,6 +112,34 @@ final class SynthesisRunnerTests: XCTestCase {
         }
     }
 
+    func testTimeoutSurfacesAsClearFailureMessage() async throws {
+        // A subprocess that sleeps longer than the timeout should be terminated
+        // and surfaced with a "timed out" message, not a generic "no JSON" error.
+        let script = """
+        #!/bin/bash
+        sleep 5
+        """
+        let scriptURL = tmpDir.appendingPathComponent("slow-claude.sh")
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755],
+                                              ofItemAtPath: scriptURL.path)
+        let logURL = tmpDir.appendingPathComponent("synth.log")
+
+        let result = try await SynthesisRunner.run(
+            command: scriptURL,
+            arguments: [],
+            logFile: logURL,
+            timeoutSeconds: 1
+        )
+
+        if case .failure(let msg) = result {
+            XCTAssertTrue(msg.lowercased().contains("timed out"),
+                          "expected timeout-flavored message, got: \(msg)")
+        } else {
+            XCTFail("expected .failure on timeout, got \(result)")
+        }
+    }
+
     func testParseLastStatusLineDirectly() {
         let stdout = """
         intermediate line

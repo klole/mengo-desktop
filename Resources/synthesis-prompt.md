@@ -8,7 +8,12 @@ INPUTS:
   - Manifest at: $MANIFEST_PATH
   - The screenpipe MCP tools (mcp__screenpipe__*) for querying the recording.
     If those tools are unavailable, fall back to the HTTP API at
-    http://127.0.0.1:3030 (use the Bash tool to curl /search and /audio).
+    http://127.0.0.1:3030. The /search and /audio endpoints require auth:
+      1. Get the token: `screenpipe auth token` (the binary is at
+         ~/Library/Application Support/ScreenpipeMenu/bin/screenpipe or
+         ~/Applications/ScreenpipeMenu.app/Contents/Helpers/screenpipe).
+      2. Pass it on each request: `curl -H "Authorization: Bearer $TOKEN" ...`
+    /health does NOT require auth.
 
 PROCESS:
   1. Read $MANIFEST_PATH. Note timeRange and activeRecordingStart.

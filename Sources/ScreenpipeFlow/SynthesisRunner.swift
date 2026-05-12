@@ -8,12 +8,10 @@ enum SynthesisResult: Equatable {
 enum SynthesisRunner {
 
     enum RunError: Error, LocalizedError {
-        case timeout
         case spawnFailed(String)
 
         var errorDescription: String? {
             switch self {
-            case .timeout: return "Synthesis subprocess timed out"
             case .spawnFailed(let s): return "Failed to spawn synthesis subprocess: \(s)"
             }
         }
@@ -21,7 +19,8 @@ enum SynthesisRunner {
 
     /// Spawns `command` with `arguments`, captures all output to `logFile`, and
     /// parses the LAST line of stdout matching the success/failure JSON contract.
-    /// Throws on timeout or spawn failure.
+    /// Returns `.failure` on timeout, subprocess error, or contract violation.
+    /// Throws only on spawn failure.
     static func run(
         command: URL,
         arguments: [String],
@@ -43,20 +42,21 @@ enum SynthesisRunner {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
-        // Capture stdout into memory for parsing the final status line; mirror
-        // both streams to the log file.
+        // FileHandle.write is not thread-safe; readabilityHandlers for the two
+        // pipes fire on different queues. Serialize log writes through one writer.
+        let logWriter = LogWriter(handle: logHandle)
         let stdoutBuffer = StdoutBuffer()
 
         stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
             let chunk = handle.availableData
             if chunk.isEmpty { return }
             stdoutBuffer.append(chunk)
-            try? logHandle.write(contentsOf: chunk)
+            logWriter.write(chunk)
         }
         stderrPipe.fileHandleForReading.readabilityHandler = { handle in
             let chunk = handle.availableData
             if chunk.isEmpty { return }
-            try? logHandle.write(contentsOf: chunk)
+            logWriter.write(chunk)
         }
 
         do {
@@ -66,12 +66,16 @@ enum SynthesisRunner {
         }
 
         // Race process exit against timeout.
+        let timedOut = TimedOutFlag()
         let processTask = Task.detached(priority: .userInitiated) { @Sendable in
             process.waitUntilExit()
         }
         let timeoutTask = Task.detached(priority: .background) { @Sendable in
-            try await Task.sleep(for: .seconds(timeoutSeconds))
-            if process.isRunning { process.terminate() }
+            try? await Task.sleep(for: .seconds(timeoutSeconds))
+            if process.isRunning {
+                timedOut.set()
+                process.terminate()
+            }
         }
         await processTask.value
         timeoutTask.cancel()
@@ -82,12 +86,15 @@ enum SynthesisRunner {
         // Drain final buffered bytes.
         if let rest = try? stdoutPipe.fileHandleForReading.readToEnd() {
             stdoutBuffer.append(rest)
-            try? logHandle.write(contentsOf: rest)
+            logWriter.write(rest)
         }
         if let rest = try? stderrPipe.fileHandleForReading.readToEnd() {
-            try? logHandle.write(contentsOf: rest)
+            logWriter.write(rest)
         }
 
+        if timedOut.value {
+            return .failure(message: "synthesis timed out after \(Int(timeoutSeconds))s")
+        }
         if process.terminationStatus != 0 {
             return .failure(message: "subprocess exited with status \(process.terminationStatus)")
         }
@@ -123,15 +130,32 @@ enum SynthesisRunner {
     }
 }
 
+/// Serializes log writes from both stdout+stderr readabilityHandlers.
+/// FileHandle.write(contentsOf:) is not documented as thread-safe.
+private final class LogWriter: @unchecked Sendable {
+    private let handle: FileHandle
+    private let lock = NSLock()
+    init(handle: FileHandle) { self.handle = handle }
+    func write(_ chunk: Data) {
+        lock.lock(); defer { lock.unlock() }
+        try? handle.write(contentsOf: chunk)
+    }
+}
+
 /// Thread-safe append-only buffer for piping subprocess stdout into memory.
-/// Process readabilityHandlers fire on a background queue; we need atomic append.
 private final class StdoutBuffer: @unchecked Sendable {
     private let lock = NSLock()
     private(set) var data = Data()
-
     func append(_ chunk: Data) {
-        lock.lock()
-        defer { lock.unlock() }
+        lock.lock(); defer { lock.unlock() }
         data.append(chunk)
     }
+}
+
+/// One-shot boolean for "did the timeout fire before the process exited?"
+private final class TimedOutFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value = false
+    var value: Bool { lock.lock(); defer { lock.unlock() }; return _value }
+    func set() { lock.lock(); _value = true; lock.unlock() }
 }
