@@ -10,6 +10,10 @@ struct ScreenpipeFlowApp: App {
     @State private var appState = AppState()
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    init() {
+        Logger.bootstrap()
+    }
+
     var body: some Scene {
         MenuBarExtra("ScreenpipeFlow", systemImage: "waveform.circle") {
             Text("ScreenpipeFlow").font(.headline)
