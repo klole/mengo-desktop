@@ -16,7 +16,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "ScreenpipeFlow",
-            path: "Sources/ScreenpipeFlow"
+            path: "Sources/ScreenpipeFlow",
+            resources: [
+                .copy("../../Resources/synthesis-prompt.md")
+            ]
         ),
         .testTarget(
             name: "ScreenpipeFlowTests",
