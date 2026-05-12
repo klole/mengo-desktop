@@ -158,16 +158,21 @@ final class RecordingController {
             of: "$MANIFEST_PATH", with: manifestURL.path)
 
         do {
-            // ~/.claude/skills/ sits behind Claude Code's "sensitive-file gate"
-            // which --add-dir + --permission-mode acceptEdits does NOT bypass.
-            // The whole purpose of this app is to write into that directory, so
-            // we explicitly opt in to skipping the gate. The user trusted
-            // ScreenpipeFlow when they installed it; we're not opening a hole
-            // they didn't already consent to.
+            // ~/.claude/skills/ is behind Claude Code's sensitive-file gate.
+            // Two similarly-named flags to know:
+            //   --allow-dangerously-skip-permissions  ENABLES the option
+            //   --dangerously-skip-permissions        ACTUALLY bypasses
+            // We need the second to make the synthesizer write skills headless.
+            // --add-dir whitelists the path for the working-dir gate that runs
+            // before the sensitive-file gate. Both are needed.
+            //
+            // The user trusted ScreenpipeFlow specifically to write into the
+            // skills directory; that's the app's entire purpose. The flag name
+            // is alarming but the trust boundary is correct.
             let result = try await SynthesisRunner.run(
                 command: claude,
                 arguments: [
-                    "--allow-dangerously-skip-permissions",
+                    "--dangerously-skip-permissions",
                     "--add-dir", outputDir.path,
                     "-p", prompt
                 ],
