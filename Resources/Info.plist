@@ -28,5 +28,13 @@
     <string>Required by macOS screen capture on some systems.</string>
     <key>NSScreenCaptureUsageDescription</key>
     <string>Captures your screen so screenpipe can index what you see. Data stays on your Mac.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <!-- Allow http://127.0.0.1:3030 — the local screenpipe HTTP API. ATS blocks
+             plain HTTP from signed apps by default; this is the standard exemption
+             for local IPC. -->
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
 </dict>
 </plist>

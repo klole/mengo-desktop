@@ -36,16 +36,51 @@ struct ScreenpipeMenuApp: App {
         MenuBarExtra {
             MenuView(state: appState)
         } label: {
-            Image(systemName: iconName(for: appState.status))
+            // .symbolRenderingMode(.palette) + .foregroundStyle on a colored Color is how
+            // you get a non-template (i.e. actually colored) status bar item in macOS 13+.
+            // Plain .foregroundColor gets template-stripped by NSStatusBarButton.
+            HStack(spacing: 4) {
+                Text(StatusBarLabel.text(for: appState.status))
+                Image(systemName: StatusBarLabel.iconName(for: appState.status))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(StatusBarLabel.color(for: appState.status))
+            }
+            .foregroundStyle(StatusBarLabel.color(for: appState.status))
         }
         .menuBarExtraStyle(.menu)
     }
+}
 
-    private func iconName(for status: AppState.Status) -> String {
+/// Helpers for the menu bar label. Plain static functions — no custom View struct,
+/// because SwiftUI's MenuBarExtra label slot is picky about what it'll render.
+enum StatusBarLabel {
+    static func text(for status: AppState.Status) -> String {
+        switch status {
+        case .idle: return "Idle"
+        case .starting: return "Starting"
+        case .recording: return "Recording"
+        case .audioPaused: return "Audio paused"
+        case .visionPaused: return "Screen paused"
+        case .bothPaused: return "Paused"
+        case .error: return "Error"
+        }
+    }
+
+    static func color(for status: AppState.Status) -> Color {
+        switch status {
+        case .recording: return .green
+        case .error: return .red
+        case .audioPaused, .visionPaused, .bothPaused: return .yellow
+        case .starting: return .blue
+        case .idle: return .secondary
+        }
+    }
+
+    static func iconName(for status: AppState.Status) -> String {
         switch status {
         case .idle: return "circle"
         case .starting: return "circle.dotted"
-        case .recording: return "record.circle.fill"
+        case .recording: return "circle.fill"
         case .audioPaused, .visionPaused, .bothPaused: return "pause.circle.fill"
         case .error: return "exclamationmark.circle.fill"
         }
