@@ -6,14 +6,14 @@ A tiny macOS menu bar app that runs [screenpipe](https://github.com/screenpipe/s
 
 In **Claude Code**, paste:
 
-> Install this for me: \<paste this repo's GitHub URL here\>
+> Install this for me: https://github.com/klole/screenpipe-menu
 
 Claude Code will read `CLAUDE.md`, clone, run `install.sh`, and tell you what to do about permissions. Total time: ~3 minutes. No `sudo` required (installs into `~/Applications/`).
 
 ## Install (manual)
 
 ```bash
-git clone <this repo>
+git clone https://github.com/klole/screenpipe-menu
 cd screenpipe-menu
 ./install.sh                                # build (or download release), install, launch
 ```
