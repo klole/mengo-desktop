@@ -8,6 +8,11 @@ let package = Package(
         .executableTarget(
             name: "ScreenpipeMenu",
             path: "Sources/ScreenpipeMenu"
+        ),
+        .testTarget(
+            name: "ScreenpipeMenuTests",
+            dependencies: ["ScreenpipeMenu"],
+            path: "Tests/ScreenpipeMenuTests"
         )
     ]
 )
