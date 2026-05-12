@@ -12,7 +12,7 @@ actor ScreenpipeClient {
         case unknown
     }
 
-    struct ThumbnailItem: Equatable {
+    struct ThumbnailItem: Equatable, Hashable {
         let timestamp: Date
         let appName: String
         let windowName: String
