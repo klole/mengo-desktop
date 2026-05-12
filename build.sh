@@ -20,7 +20,8 @@ cp ".build/apple/Products/Release/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NA
 cp Resources/Info.plist "$APP_BUNDLE/Contents/Info.plist"
 
 echo "==> Ad-hoc codesigning"
-codesign --sign - --deep --force --options runtime "$APP_BUNDLE"
+# Note: --options runtime (hardened runtime) requires Developer ID. We're ad-hoc.
+codesign --sign - --deep --force "$APP_BUNDLE"
 
 echo "==> Zipping for distribution"
 ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$ZIP_OUT"
