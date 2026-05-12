@@ -13,6 +13,15 @@ let package = Package(
             name: "ScreenpipeMenuTests",
             dependencies: ["ScreenpipeMenu"],
             path: "Tests/ScreenpipeMenuTests"
+        ),
+        .executableTarget(
+            name: "ScreenpipeFlow",
+            path: "Sources/ScreenpipeFlow"
+        ),
+        .testTarget(
+            name: "ScreenpipeFlowTests",
+            dependencies: ["ScreenpipeFlow"],
+            path: "Tests/ScreenpipeFlowTests"
         )
     ]
 )
