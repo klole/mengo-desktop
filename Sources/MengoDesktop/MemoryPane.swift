@@ -119,8 +119,8 @@ struct MemoryPane: View {
 
     private var degradedMessage: String? {
         guard recorder.status == .recording, let h = recorder.lastHealth else { return nil }
-        if h.frameStatus != "ok" { return "Screen capture is degraded — open the log for details." }
-        if h.audioStatus != "ok" { return "Microphone capture is degraded — open the log for details." }
+        if h.frameStatus != "ok" { return "Screen capture is degraded." }
+        if h.audioStatus != "ok" { return "Microphone capture is degraded." }
         return nil
     }
 
@@ -156,7 +156,7 @@ struct MemoryPane: View {
                 }
                 .buttonStyle(.bordered).disabled(disableControls)
                 Button { Task { await screenAction() } } label: {
-                    Label(screenTitle, systemImage: screenPausedNow ? "display" : "display.slash")
+                    Label(screenTitle, systemImage: screenPausedNow ? "rectangle" : "rectangle.slash")
                 }
                 .buttonStyle(.bordered).disabled(disableControls)
                 Spacer(minLength: 12)
@@ -217,16 +217,10 @@ struct MemoryPane: View {
     // MARK: - Footer
 
     private var footer: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text("Mengo Memory keeps a private, on-device record of what you see and hear. Nothing is uploaded.")
-                .font(Theme.caption).foregroundStyle(Theme.mutedText)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 12)
-            Button { NSWorkspace.shared.open(recorder.recorderLogURL) } label: {
-                Label("View log", systemImage: "doc.text")
-            }
-            .buttonStyle(.link).font(Theme.caption)
-        }
+        Text("Mengo Memory keeps a private, on-device record of what you see and hear. Nothing is uploaded.")
+            .font(Theme.caption).foregroundStyle(Theme.mutedText)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -245,7 +239,9 @@ private struct StatTile: View {
                 .contentTransition(.numericText())
                 .animation(.spring(duration: 0.4), value: value)
             Text(label).font(.system(size: 10)).foregroundStyle(Theme.mutedText)
-                .multilineTextAlignment(.center).fixedSize()
+                .multilineTextAlignment(.center)
+                .lineLimit(2, reservesSpace: true)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .frame(minWidth: 84)
         .padding(.vertical, 12).padding(.horizontal, 10)

@@ -63,9 +63,9 @@ struct MenuBarContent: View {
     @ViewBuilder private var screenItem: some View {
         switch recorder.status {
         case .screenPaused, .bothPaused:
-            Button { Task { await recorder.resumeScreen() } } label: { Label("Resume screen", systemImage: "display") }
+            Button { Task { await recorder.resumeScreen() } } label: { Label("Resume screen", systemImage: "rectangle") }
         default:
-            Button { Task { await recorder.pauseScreen() } } label: { Label("Pause screen", systemImage: "display.slash") }
+            Button { Task { await recorder.pauseScreen() } } label: { Label("Pause screen", systemImage: "rectangle.slash") }
                 .disabled(!recorder.status.isRecording)
         }
     }
