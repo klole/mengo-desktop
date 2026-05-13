@@ -19,23 +19,40 @@ struct MainWindowView: View {
                 wordmark
                 ScrollView {
                     VStack(spacing: 2) {
-                        ForEach(SidebarSection.allCases) { section in
+                        ForEach(SidebarSection.allCases.filter { $0 != .settings }) { section in
                             sidebarRow(section)
                         }
                     }
                     .padding(.horizontal, 8)
                     .padding(.top, 4)
                 }
+                Spacer(minLength: 8)
+                VStack(spacing: 8) {
+                    if !account.isPro {
+                        Button {
+                            Task { NSWorkspace.shared.open(await account.webURL(path: "/upgrade")) }
+                        } label: {
+                            Label("Purchase Mengo Pro", systemImage: "sparkles")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent).tint(Theme.accent)
+                        Text("\(flow.library.filter(\.exists).count) of \(account.flowLimit ?? 3) free flows used")
+                            .font(Theme.caption).foregroundStyle(Theme.mutedText)
+                    }
+                    sidebarRow(.settings)
+                }
+                .padding(.horizontal, 8).padding(.bottom, 10)
             }
             .background(Theme.windowBackground)
             .frame(minWidth: 200)
         } detail: {
             Group {
                 switch appState.selectedSection {
-                case .memory:  MemoryPane(recorder: recorder)
-                case .flow:    FlowPane(flow: flow)
-                case .library: LibraryPane(flow: flow)
-                default:       ComingSoonPane(section: appState.selectedSection)
+                case .memory:   MemoryPane(recorder: recorder)
+                case .flow:     FlowPane(flow: flow)
+                case .library:  LibraryPane(flow: flow)
+                case .settings: SettingsPane(account: account, settings: settings, recorder: recorder, flow: flow)
+                default:        ComingSoonPane(section: appState.selectedSection)
                 }
             }
             .id(appState.selectedSection)
