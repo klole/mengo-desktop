@@ -45,7 +45,15 @@ struct RecorderPreflightHealth: FlowPreflightHealth {
 @MainActor
 final class FlowController {
 
-    enum PreflightFailure: Equatable { case screenpipeNotRunning, audioPaused, claudeNotFound, claudeMCPNotConfigured }
+    enum PreflightFailure: Equatable {
+        case screenpipeNotRunning
+        case audioPaused
+        case runtimeNotFound(SynthesisRuntime)
+        case runtimeMCPNotConfigured(SynthesisRuntime)
+    }
+
+    /// Snapshot of the user's entitlement, captured at `save()` time.
+    struct Entitlement { let isPro: Bool; let flowLimit: Int? }
 
     private(set) var flowState: FlowState = .idle
     private(set) var library: [FlowEntry] = []
@@ -54,7 +62,7 @@ final class FlowController {
 
     // Injected deps.
     @ObservationIgnored private let screenpipeToken: String
-    @ObservationIgnored private let claudeExecutable: URL?
+    @ObservationIgnored private let executableOverride: (SynthesisRuntime) -> URL?
     @ObservationIgnored private let synthesisPrompt: String
     @ObservationIgnored let outputDir: URL          // ~/.claude/skills
     @ObservationIgnored private let manifestsDir: URL
@@ -63,6 +71,9 @@ final class FlowController {
     @ObservationIgnored private let synthesis: SynthesisRunning
     @ObservationIgnored private let health: FlowPreflightHealth
     @ObservationIgnored private let moments: MomentIndexing
+    @ObservationIgnored private let settings: SettingsStore
+    @ObservationIgnored private let entitlement: @MainActor () -> Entitlement
+    @ObservationIgnored private let onFlowLimitReached: @MainActor () -> Void
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let hudShow: (FlowSession, @escaping () -> Void) -> Void
     @ObservationIgnored private let hudHide: () -> Void
@@ -76,7 +87,7 @@ final class FlowController {
     @ObservationIgnored private var lastManifestURL: URL?
 
     init(screenpipeToken: String,
-         claudeExecutable: URL?,
+         executableOverride: @escaping (SynthesisRuntime) -> URL? = { $0.findExecutable() },
          synthesisPrompt: String,
          outputDir: URL,
          manifestsDir: URL,
@@ -85,13 +96,16 @@ final class FlowController {
          synthesis: SynthesisRunning = SystemSynthesisRunner(),
          health: FlowPreflightHealth,
          moments: MomentIndexing = NullMomentIndexing(),
+         settings: SettingsStore,
+         entitlement: @escaping @MainActor () -> Entitlement = { .init(isPro: true, flowLimit: nil) },
+         onFlowLimitReached: @escaping @MainActor () -> Void = { FlowController.presentDefaultFlowLimitAlert() },
          now: @escaping () -> Date = Date.init,
          hudShow: @escaping (FlowSession, @escaping () -> Void) -> Void,
          hudHide: @escaping () -> Void,
          notify: @escaping (String) -> Void,
          onPreflightFailure: @escaping @MainActor (PreflightFailure) -> Void = { FlowController.presentDefaultPreflightAlert($0) }) {
         self.screenpipeToken = screenpipeToken
-        self.claudeExecutable = claudeExecutable
+        self.executableOverride = executableOverride
         self.synthesisPrompt = synthesisPrompt
         self.outputDir = outputDir
         self.manifestsDir = manifestsDir
@@ -100,6 +114,9 @@ final class FlowController {
         self.synthesis = synthesis
         self.health = health
         self.moments = moments
+        self.settings = settings
+        self.entitlement = entitlement
+        self.onFlowLimitReached = onFlowLimitReached
         self.now = now
         self.hudShow = hudShow
         self.hudHide = hudHide
@@ -111,15 +128,17 @@ final class FlowController {
         AppDelegate.sharedFlowController = self
     }
 
-    /// Production initializer wired to the live recorder + bundled prompt + discovered `claude`.
+    /// Production initializer wired to the live recorder + bundled prompt + discovered runtime executables.
     static func live(recorder: RecorderController,
                      hud: RecordingHUDController,
+                     account: AccountStore,
+                     settings: SettingsStore,
                      notify: @escaping (String) -> Void) -> FlowController {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appendingPathComponent("MengoDesktop/flows", isDirectory: true)
         return FlowController(
             screenpipeToken: recorder.screenpipeToken,
-            claudeExecutable: Self.findClaude(),
+            executableOverride: { $0.findExecutable() },
             synthesisPrompt: Self.loadSynthesisPrompt(),
             outputDir: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/skills", isDirectory: true),
             manifestsDir: appSupport.appendingPathComponent("manifests", isDirectory: true),
@@ -127,17 +146,11 @@ final class FlowController {
             library: FlowLibrary(),
             health: RecorderPreflightHealth(recorder: recorder),
             moments: ScreenpipeSearchClient(token: recorder.screenpipeToken),
+            settings: settings,
+            entitlement: { [weak account] in .init(isPro: account?.isPro ?? false, flowLimit: account?.flowLimit) },
             hudShow: { session, onStop in hud.show(session: session, onStop: onStop) },
             hudHide: { hud.hide() },
             notify: notify)
-    }
-
-    static func findClaude() -> URL? {
-        let home = NSHomeDirectory()
-        for p in ["/usr/local/bin/claude", "/opt/homebrew/bin/claude",
-                  "\(home)/.claude/local/claude", "\(home)/.npm-global/bin/claude", "\(home)/.local/bin/claude"]
-        where FileManager.default.isExecutableFile(atPath: p) { return URL(fileURLWithPath: p) }
-        return nil
     }
 
     static func loadSynthesisPrompt() -> String {
@@ -159,21 +172,22 @@ final class FlowController {
         let s = await health.snapshot()
         if !s.healthy { return .screenpipeNotRunning }
         if s.audioPaused { return .audioPaused }
-        guard let claude = claudeExecutable else { return .claudeNotFound }
-        if await Self.mcpListLacksScreenpipe(claude: claude) { return .claudeMCPNotConfigured }
+        let runtime = settings.synthesisRuntime
+        guard runtime.isAvailable, let exe = executableOverride(runtime) else { return .runtimeNotFound(runtime) }
+        if await Self.mcpListLacksScreenpipe(executable: exe, runtime: runtime) { return .runtimeMCPNotConfigured(runtime) }
         return nil
     }
 
-    /// Best-effort: returns true only if `claude mcp list` *succeeds* and doesn't
+    /// Best-effort: returns true only if `<exe> mcp list` *succeeds* and doesn't
     /// mention "screenpipe". If we can't run it, don't block.
-    private static func mcpListLacksScreenpipe(claude: URL) async -> Bool {
+    private static func mcpListLacksScreenpipe(executable: URL, runtime: SynthesisRuntime) async -> Bool {
         await Task.detached { () -> Bool in
-            let p = Process(); p.executableURL = claude; p.arguments = ["mcp", "list"]
+            let p = Process(); p.executableURL = executable; p.arguments = runtime.mcpListArguments
             let out = Pipe(); p.standardOutput = out; p.standardError = Pipe()
             guard (try? p.run()) != nil else { return false }
             let data = out.fileHandleForReading.readDataToEndOfFile(); p.waitUntilExit()
             guard p.terminationStatus == 0, let text = String(data: data, encoding: .utf8) else { return false }
-            return !text.lowercased().contains("screenpipe")
+            return runtime.mcpListLacksScreenpipe(in: text)
         }.value
     }
 
@@ -249,30 +263,39 @@ final class FlowController {
         await synthesize(manifestURL: manifestURL)
     }
 
-    /// Spawn `claude -p` against an already-written manifest, handle the result.
+    /// Spawn the configured synthesis runtime against an already-written manifest, handle the result.
     private func synthesize(manifestURL: URL) async {
         lastManifestURL = manifestURL
         flowState = .synthesizing(manifestURL)
 
-        guard let claude = claudeExecutable else { flowState = .error("Claude Code CLI not found."); return }
+        let runtime = settings.synthesisRuntime
+        guard runtime.isAvailable, let exe = executableOverride(runtime) else {
+            flowState = .error("\(runtime.displayName) CLI not found.")
+            return
+        }
         let logURL = Log.synthesisLogURL(id: UUID().uuidString)
+        let lastMessageFile = Log.directory.appendingPathComponent("synthesis-last-\(UUID().uuidString).txt")
         let prompt = synthesisPrompt.replacingOccurrences(of: "$MANIFEST_PATH", with: manifestURL.path)
+        let invocation = runtime.invocation(executable: exe, skillsDir: outputDir, prompt: prompt, lastMessageFile: lastMessageFile)
 
-        // ~/.claude/skills/ is behind Claude Code's sensitive-file gate.
-        //   --dangerously-skip-permissions  bypasses it (the user trusted Mengo Flow to write skills — that's the point)
-        //   --add-dir <dir>                 whitelists the path for the working-dir gate that runs first
-        // SCREENPIPE_API_KEY: so the screenpipe MCP child (spawned by `claude`) can authenticate against Mengo's recorder.
-        // PATH: a Finder-launched .app has a minimal PATH; prepend common locations so `claude`/`npx`/`node` resolve.
+        // ~/.claude/skills/ is behind the runtime's sensitive-file gate. Each runtime's
+        // invocation builder embeds the right bypass flag + --add-dir whitelist.
+        // SCREENPIPE_API_KEY: so the screenpipe MCP child (spawned by the runtime) can authenticate against Mengo's recorder.
+        // PATH: a Finder-launched .app has a minimal PATH; prepend common locations so `claude`/`codex`/`npx`/`node` resolve.
         var env = ProcessInfo.processInfo.environment
         env["SCREENPIPE_API_KEY"] = screenpipeToken
         let home = NSHomeDirectory()
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(home)/.local/bin:\(home)/bin:" + (env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin")
 
         do {
-            let result = try await synthesis.run(
-                command: claude,
-                arguments: ["--dangerously-skip-permissions", "--add-dir", outputDir.path, "-p", prompt],
+            var result = try await synthesis.run(
+                command: invocation.executable, arguments: invocation.arguments,
                 environment: env, logFile: logURL, timeoutSeconds: 300)
+            // Codex's `-o` file is belt-and-suspenders: if stdout had no JSON line, try the file.
+            if case .file(let url) = invocation.finalStatusSource, case .failure = result,
+               let data = try? Data(contentsOf: url) {
+                result = SynthesisRunner.parseLastStatusLine(stdout: data)
+            }
             switch result {
             case .success(let dir, let slug):
                 let entry = FlowEntry(slug: slug, name: slug, path: dir, createdAt: now(),
@@ -317,6 +340,16 @@ final class FlowController {
     /// name/description/parameters is a follow-up — rename + library update is the critical path.)
     func save(name: String, description: String?, parameters: [FlowParameter]) {
         guard case .reviewing(let dir) = flowState else { return }
+        // Gate Free users at the configured flow limit. The current `dir` is the unsaved
+        // synthesis output — `libraryStore` already contains it from `runSynthesis`, plus
+        // any earlier saved flows. The limit applies to the *kept* count (existing on disk).
+        let ent = entitlement()
+        if !ent.isPro, let limit = ent.flowLimit {
+            let kept = libraryStore.load()
+                .filter { $0.slug != dir.lastPathComponent && FileManager.default.fileExists(atPath: $0.path.path) }
+                .count
+            if kept >= limit { onFlowLimitReached(); return }
+        }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let parent = dir.deletingLastPathComponent()
         let siblings = Set((try? FileManager.default.contentsOfDirectory(atPath: parent.path)) ?? [])
@@ -388,19 +421,36 @@ final class FlowController {
         case .audioPaused:
             a.messageText = "Your microphone is paused"
             a.informativeText = "Flow needs the mic to capture your narration. Resume it from the Memory tab, then try again."
-        case .claudeNotFound:
-            a.messageText = "Claude Code CLI not found"
-            a.informativeText = "Install it from https://claude.ai/code, then retry. Flow looked in /usr/local/bin, /opt/homebrew/bin, ~/.claude/local, ~/.npm-global/bin, and ~/.local/bin."
-        case .claudeMCPNotConfigured:
-            a.messageText = "The screenpipe MCP isn't set up for Claude Code"
-            a.informativeText = "Run this in a terminal, then retry:\n\nclaude mcp add screenpipe -s user -- npx -y screenpipe-mcp"
+        case .runtimeNotFound(let runtime):
+            a.messageText = "\(runtime.displayName) CLI not found"
+            let where_ = runtime.executableSearchPaths.joined(separator: ", ")
+            a.informativeText = "Install the \(runtime.displayName) CLI, then retry. Flow looked in: \(where_)"
+        case .runtimeMCPNotConfigured(let runtime):
+            a.messageText = "The screenpipe MCP isn't set up for \(runtime.displayName)"
+            a.informativeText = "Run this in a terminal, then retry:\n\n\(runtime.mcpAddCommand)"
             a.addButton(withTitle: "Copy command"); a.addButton(withTitle: "OK")
             if a.runModal() == .alertFirstButtonReturn {
                 NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString("claude mcp add screenpipe -s user -- npx -y screenpipe-mcp", forType: .string)
+                NSPasteboard.general.setString(runtime.mcpAddCommand, forType: .string)
             }
             return
         }
         a.addButton(withTitle: "OK"); a.runModal()
+    }
+
+    /// Default action when a Free user tries to save past their flow limit.
+    /// Opens the upgrade page via the global `AccountStore` (handoff URL).
+    static func presentDefaultFlowLimitAlert() {
+        let a = NSAlert()
+        a.messageText = "You've used all your free flows"
+        a.informativeText = "Upgrade to Mengo Pro for unlimited flows, or delete one from the Library to make room."
+        a.addButton(withTitle: "Upgrade…")
+        a.addButton(withTitle: "Cancel")
+        if a.runModal() == .alertFirstButtonReturn {
+            Task { @MainActor in
+                let url = await AppDelegate.sharedAccount?.webURL(path: "/upgrade") ?? URL(string: "https://mengo.ai/upgrade")!
+                NSWorkspace.shared.open(url)
+            }
+        }
     }
 }
