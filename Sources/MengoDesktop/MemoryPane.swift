@@ -171,10 +171,6 @@ struct MemoryPane: View {
                     Label("Reveal recordings", systemImage: "folder")
                 }
                 .buttonStyle(.plain).foregroundStyle(Theme.accent)
-                Button { showSources = true } label: {
-                    Label("Configure sources…", systemImage: "slider.horizontal.3")
-                }
-                .buttonStyle(.plain).foregroundStyle(Theme.accent)
             }
         }
     }
@@ -234,10 +230,16 @@ struct MemoryPane: View {
     // MARK: - Footer
 
     private var footer: some View {
-        Text("Mengo Memory keeps a private, on-device record of what you see and hear. Nothing is uploaded.")
-            .font(Theme.caption).foregroundStyle(Theme.mutedText)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(alignment: .firstTextBaseline) {
+            Text("Mengo Memory keeps a private, on-device record of what you see and hear. Nothing is uploaded.")
+                .font(Theme.caption).foregroundStyle(Theme.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 12)
+            Button { showSources = true } label: {
+                Label("Configure sources…", systemImage: "slider.horizontal.3")
+            }
+            .buttonStyle(.plain).foregroundStyle(Theme.accent).font(Theme.caption)
+        }
     }
 }
 
