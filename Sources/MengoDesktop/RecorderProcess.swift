@@ -4,7 +4,7 @@ import Foundation
 /// drive the controller with a stub instead of spawning a real screenpipe.
 protocol RecorderProcessControlling: AnyObject {
     var isRunning: Bool { get }
-    func start(binaryURL: URL) throws
+    func start(binaryURL: URL, extraArguments: [String]) throws
     func stop()
 }
 
@@ -26,8 +26,9 @@ final class RecorderProcess: RecorderProcessControlling {
 
     var isRunning: Bool { process?.isRunning ?? false }
 
-    /// Spawn `binaryURL record` with our auth token in the env. Truncates the log on each start.
-    func start(binaryURL: URL) throws {
+    /// Spawn `binaryURL record [extraArguments…]` with our auth token in the env.
+    /// Truncates the log on each start.
+    func start(binaryURL: URL, extraArguments: [String]) throws {
         guard !isRunning else { return }
 
         FileManager.default.createFile(atPath: logFileURL.path, contents: nil)
@@ -36,7 +37,7 @@ final class RecorderProcess: RecorderProcessControlling {
 
         let proc = Process()
         proc.executableURL = binaryURL
-        proc.arguments = ["record"]
+        proc.arguments = ["record"] + extraArguments
         var env = ProcessInfo.processInfo.environment
         env["SCREENPIPE_API_KEY"] = token
         // .app processes launched via Finder get a minimal PATH that omits the user's

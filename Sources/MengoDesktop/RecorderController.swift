@@ -14,11 +14,21 @@ final class RecorderController {
     private(set) var lastHealth: ScreenpipeHealth?
     private(set) var recordingsSizeBytes: Int64?
 
+    /// What the live recorder process was actually started with — drives the
+    /// "Recording sources" sheet's pre-selection / "changed?" check and the
+    /// Memory pane's "displays" / "mic sources" tiles. `nil` ⇒ screenpipe's
+    /// default (all monitors / default mic + system audio).
+    private(set) var runningMonitorIDs: [Int]?
+    private(set) var runningAudioDeviceNames: [String]?
+    private(set) var runningAudioDisabled = false
+
     @ObservationIgnored private let process: RecorderProcessControlling
     @ObservationIgnored private let api: RecorderHealthAPI
     @ObservationIgnored private let ensureBinaryClosure: () throws -> URL
     @ObservationIgnored private let requestPermissionsClosure: () async -> Void
     @ObservationIgnored private let pollInterval: Duration
+    @ObservationIgnored private let sourcesStore: RecordingSourcesStore
+    @ObservationIgnored private let sourceCatalog: RecordingSourceCatalog
     @ObservationIgnored private(set) var healthTask: Task<Void, Never>?
     @ObservationIgnored private var audioPaused = false
     @ObservationIgnored private var screenPaused = false
@@ -28,7 +38,9 @@ final class RecorderController {
         apiFactory: (String) -> RecorderHealthAPI = { APIClient(token: $0) },
         ensureBinary: @escaping () throws -> URL = { try BinaryManager.ensureBinary() },
         requestPermissions: @escaping () async -> Void = RecorderController.requestSystemPermissions,
-        pollInterval: Duration = .seconds(5)
+        pollInterval: Duration = .seconds(5),
+        sourcesStore: RecordingSourcesStore = RecordingSourcesStore(),
+        sourceCatalog: RecordingSourceCatalog = ScreenpipeCLICatalog()
     ) {
         let token = RecorderProcess.newToken()
         self.process = processFactory(token)
@@ -36,6 +48,8 @@ final class RecorderController {
         self.ensureBinaryClosure = ensureBinary
         self.requestPermissionsClosure = requestPermissions
         self.pollInterval = pollInterval
+        self.sourcesStore = sourcesStore
+        self.sourceCatalog = sourceCatalog
         AppDelegate.sharedRecorder = self   // V1's bridge for the AppDelegate hooks
     }
 
@@ -70,11 +84,13 @@ final class RecorderController {
     }
 
     private func spawnAndPoll(binaryURL: URL) async {
-        do { try process.start(binaryURL: binaryURL) }
+        let sources = await buildSourceArguments()
+        do { try process.start(binaryURL: binaryURL, extraArguments: sources.args) }
         catch {
             status = .error("failed to start recorder: \(error)")
             return
         }
+        applyRunningState(sources)
         status = .starting
         startHealthPolling()
     }
@@ -118,7 +134,9 @@ final class RecorderController {
         let wasAudioPaused = audioPaused
         do {
             let binaryURL = try ensureBinaryClosure()
-            try process.start(binaryURL: binaryURL)
+            let sources = await buildSourceArguments()
+            try process.start(binaryURL: binaryURL, extraArguments: sources.args)
+            applyRunningState(sources)
             status = .starting
             startHealthPolling()
             if wasAudioPaused {
@@ -136,6 +154,57 @@ final class RecorderController {
             let binaryURL = try ensureBinaryClosure()
             await spawnAndPoll(binaryURL: binaryURL)
         } catch { status = .error("restart failed: \(error)") }
+    }
+
+    /// The persisted source selection has changed (the caller already wrote
+    /// `RecordingSourcesStore`). Restart the recorder so the new `--monitor-id` /
+    /// `--audio-device` / `--disable-audio` flags take effect.
+    func applyRecordingSources() async {
+        process.stop()
+        healthTask?.cancel(); healthTask = nil
+        audioPaused = false; screenPaused = false
+        do {
+            let binaryURL = try ensureBinaryClosure()
+            await spawnAndPoll(binaryURL: binaryURL)
+        } catch { status = .error("applying recording sources failed: \(error)") }
+    }
+
+    // MARK: - Source arguments
+
+    /// Translate the persisted source selection into `screenpipe record` flags.
+    /// Monitor IDs are re-validated against the live display list; if none survive,
+    /// fall back to "all monitors" (no flag). The (slow) display enumeration runs
+    /// only when an explicit monitor selection exists.
+    private func buildSourceArguments() async
+        -> (args: [String], monitorIDs: [Int]?, audioNames: [String]?, audioDisabled: Bool) {
+        var args: [String] = []
+        var resolvedMonitorIDs: [Int]?
+
+        if let wanted = sourcesStore.selectedMonitorIDs, !wanted.isEmpty {
+            let liveIDs: [Int]? = (try? await sourceCatalog.availableMonitors()).map { $0.map { $0.id } }
+            let surviving: [Int]
+            if let liveIDs { surviving = wanted.filter { liveIDs.contains($0) } }
+            else { surviving = wanted }   // catalog failed → trust the stored list
+            if !surviving.isEmpty {
+                resolvedMonitorIDs = surviving
+                for id in surviving { args += ["--monitor-id", String(id)] }
+            }
+        }
+
+        let audioNames = sourcesStore.selectedAudioDeviceNames
+        var audioDisabled = false
+        if let audioNames {
+            if audioNames.isEmpty { args.append("--disable-audio"); audioDisabled = true }
+            else { for name in audioNames { args += ["--audio-device", name] } }
+        }
+
+        return (args, resolvedMonitorIDs, audioNames, audioDisabled)
+    }
+
+    private func applyRunningState(_ s: (args: [String], monitorIDs: [Int]?, audioNames: [String]?, audioDisabled: Bool)) {
+        runningMonitorIDs = s.monitorIDs
+        runningAudioDeviceNames = s.audioNames
+        runningAudioDisabled = s.audioDisabled
     }
 
     func pauseAll() async {
