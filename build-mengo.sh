@@ -43,6 +43,7 @@ mkdir -p "$APP_BUNDLE/Contents/Helpers"
 
 cp ".build/apple/Products/Release/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp Resources/MengoDesktopInfo.plist "$APP_BUNDLE/Contents/Info.plist"
+cp Resources/MengoLogo.png "$APP_BUNDLE/Contents/Resources/MengoLogo.png"
 
 # Embed the screenpipe binary + its Metal library. Tarball layout: package/bin/{screenpipe, mlx.metallib}
 tar -xzf "$TARBALL" -C "$APP_BUNDLE/Contents/Helpers" --strip-components=2 package/bin/
