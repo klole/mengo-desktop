@@ -44,6 +44,7 @@ mkdir -p "$APP_BUNDLE/Contents/Helpers"
 cp ".build/apple/Products/Release/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp Resources/MengoDesktopInfo.plist "$APP_BUNDLE/Contents/Info.plist"
 cp -X Resources/MengoLogo.png "$APP_BUNDLE/Contents/Resources/MengoLogo.png"   # -X: don't copy extended attrs (codesign rejects FinderInfo/resource forks)
+cp -X Resources/synthesis-prompt.md "$APP_BUNDLE/Contents/Resources/synthesis-prompt.md"   # Flow's bootstrap synthesis prompt (loaded via Bundle.main)
 
 # Embed the screenpipe binary + its Metal library. Tarball layout: package/bin/{screenpipe, mlx.metallib}
 tar -xzf "$TARBALL" -C "$APP_BUNDLE/Contents/Helpers" --strip-components=2 package/bin/

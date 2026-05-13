@@ -11,3 +11,4 @@ MengoDesktop.app/
 MengoDesktop.zip
 *.dSYM
 .DS_Store
+.superpowers/
