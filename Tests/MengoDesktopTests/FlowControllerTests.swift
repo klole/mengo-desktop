@@ -11,6 +11,17 @@ final class FlowControllerTests: XCTestCase {
         func run(command: URL, arguments: [String], environment: [String: String]?,
                  logFile: URL, timeoutSeconds: TimeInterval) async throws -> SynthesisResult { result }
     }
+    final class RecordingSynthesis: SynthesisRunning, @unchecked Sendable {
+        var result: SynthesisResult = .failure(message: "stub")
+        private(set) var lastCommand: URL?
+        private(set) var lastArguments: [String]?
+        private(set) var lastEnvironment: [String: String]?
+        func run(command: URL, arguments: [String], environment: [String: String]?,
+                 logFile: URL, timeoutSeconds: TimeInterval) async throws -> SynthesisResult {
+            lastCommand = command; lastArguments = arguments; lastEnvironment = environment
+            return result
+        }
+    }
     struct StubHealth: FlowPreflightHealth {
         var healthy = true
         var audioPaused = false
@@ -27,17 +38,34 @@ final class FlowControllerTests: XCTestCase {
         return u
     }
 
+    final class StubLoginItem: LoginItemControlling, @unchecked Sendable {
+        var enabled = false
+        func register() throws { enabled = true }
+        func unregister() throws { enabled = false }
+        var isEnabled: Bool { enabled }
+    }
+    private func makeSettings(runtime: SynthesisRuntime = .claudeCode) -> SettingsStore {
+        let d = UserDefaults(suiteName: "fc-\(UUID().uuidString)")!
+        let s = SettingsStore(defaults: d, loginItem: StubLoginItem())
+        s.synthesisRuntime = runtime
+        return s
+    }
+
     private func makeController(
         synthesis: SynthesisRunning = StubSynthesis(result: .failure(message: "stub")),
         health: FlowPreflightHealth = StubHealth(),
         moments: MomentIndexing = StubMoments(),
-        claudeExecutable: URL? = URL(fileURLWithPath: "/tmp/does-not-exist-claude"),
+        executableOverride: @escaping (SynthesisRuntime) -> URL? = { _ in URL(fileURLWithPath: "/tmp/does-not-exist-claude") },
+        settings: SettingsStore? = nil,
+        entitlement: @escaping @MainActor () -> FlowController.Entitlement = { .init(isPro: true, flowLimit: nil) },
+        onFlowLimitReached: @escaping @MainActor () -> Void = { },
         now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_700_000_000) }
     ) -> FlowController {
         let base = tmpDir()
+        let st = settings ?? makeSettings()
         return FlowController(
             screenpipeToken: "sp-test",
-            claudeExecutable: claudeExecutable,
+            executableOverride: executableOverride,
             synthesisPrompt: "PROMPT $MANIFEST_PATH",
             outputDir: base.appendingPathComponent("skills"),
             manifestsDir: base.appendingPathComponent("manifests"),
@@ -46,6 +74,9 @@ final class FlowControllerTests: XCTestCase {
             synthesis: synthesis,
             health: health,
             moments: moments,
+            settings: st,
+            entitlement: entitlement,
+            onFlowLimitReached: onFlowLimitReached,
             now: now,
             hudShow: { _, _ in }, hudHide: { }, notify: { _ in },
             onPreflightFailure: { _ in })
@@ -62,8 +93,13 @@ final class FlowControllerTests: XCTestCase {
     func test_preflight_audioPaused() async {
         let r = await makeController(health: StubHealth(audioPaused: true)).preflight(); XCTAssertEqual(r, .audioPaused)
     }
-    func test_preflight_claudeMissing() async {
-        let r = await makeController(claudeExecutable: nil).preflight(); XCTAssertEqual(r, .claudeNotFound)
+    func test_preflight_runtimeMissing() async {
+        let r = await makeController(executableOverride: { _ in nil }).preflight()
+        XCTAssertEqual(r, .runtimeNotFound(.claudeCode))
+    }
+    func test_preflight_codexRuntimeMissing() async {
+        let r = await makeController(executableOverride: { _ in nil }, settings: makeSettings(runtime: .codex)).preflight()
+        XCTAssertEqual(r, .runtimeNotFound(.codex))
     }
 
     func test_start_entersRecording() async {
@@ -72,7 +108,7 @@ final class FlowControllerTests: XCTestCase {
         guard case .recording = c.flowState else { return XCTFail("expected .recording, got \(c.flowState)") }
     }
     func test_start_blockedByPreflight_staysIdle() async {
-        let c = makeController(claudeExecutable: nil)   // → .claudeNotFound; onPreflightFailure is a no-op in tests
+        let c = makeController(executableOverride: { _ in nil })   // → .runtimeNotFound; onPreflightFailure is a no-op in tests
         await c.start()
         XCTAssertEqual(c.flowState, .idle)
     }
@@ -220,7 +256,7 @@ final class FlowControllerTests: XCTestCase {
         XCTAssertEqual(s.activeRecordingStart, t)
     }
     func test_startRetroactive_blockedByPreflight_staysBrowsing() async {
-        let c = makeController(claudeExecutable: nil)   // → .claudeNotFound; onPreflightFailure is a no-op in tests
+        let c = makeController(executableOverride: { _ in nil })   // → .runtimeNotFound; onPreflightFailure is a no-op in tests
         c.beginBrowsingTimeline()
         await c.startRetroactive(bufferStart: Date())
         XCTAssertEqual(c.flowState, .browsingTimeline)
@@ -235,5 +271,100 @@ final class FlowControllerTests: XCTestCase {
         let c = makeController(moments: StubMoments(moments: m))
         let got = try await c.loadMoments(lookbackMinutes: 30)
         XCTAssertEqual(got, m)
+    }
+
+    // MARK: runtime dispatch
+
+    func test_synthesize_codexRuntime_issuesCodexCommand() async {
+        var t = Date(timeIntervalSince1970: 1_000_000)
+        let stub = RecordingSynthesis()
+        stub.result = .success(outputDir: URL(fileURLWithPath: "/tmp/skills/x"), slug: "x")
+        // Fake non-existent path so the preflight MCP-list spawn returns false (doesn't block) — same trick the Claude tests use.
+        let codexExe = URL(fileURLWithPath: "/tmp/does-not-exist-codex")
+        let c = makeController(synthesis: stub,
+                               executableOverride: { _ in codexExe },
+                               settings: makeSettings(runtime: .codex),
+                               now: { t })
+        await c.start()
+        t = Date(timeIntervalSince1970: 1_000_030)
+        await c.stop()
+        XCTAssertEqual(stub.lastCommand, codexExe)
+        XCTAssertEqual(stub.lastArguments?.first, "exec")
+        XCTAssertTrue(stub.lastArguments?.contains("--dangerously-bypass-approvals-and-sandbox") ?? false)
+    }
+
+    func test_synthesize_claudeRuntime_stillIssuesClaudeCommand() async {
+        var t = Date(timeIntervalSince1970: 1_000_000)
+        let stub = RecordingSynthesis()
+        stub.result = .success(outputDir: URL(fileURLWithPath: "/tmp/skills/x"), slug: "x")
+        let claudeExe = URL(fileURLWithPath: "/tmp/does-not-exist-claude")
+        let c = makeController(synthesis: stub, executableOverride: { _ in claudeExe }, now: { t })
+        await c.start()
+        t = Date(timeIntervalSince1970: 1_000_030)
+        await c.stop()
+        XCTAssertEqual(stub.lastCommand, claudeExe)
+        XCTAssertEqual(stub.lastArguments?.first, "--dangerously-skip-permissions")
+    }
+
+    // MARK: entitlement / flow-limit gate
+
+    func test_save_blockedAtFreeLimit_doesNotAdd_andCallsCallback() async {
+        var t = Date(timeIntervalSince1970: 1_000_000)
+        // Pre-populate the library with 3 existing entries on disk (via the real store so the JSON encoding matches).
+        let parent = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("skills-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let libFile = parent.appendingPathComponent("library.json")
+        let preStore = FlowLibrary(fileURL: libFile)
+        for i in 0..<3 {
+            let d = parent.appendingPathComponent("pre-\(i)")
+            try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+            try? "x".write(to: d.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+            preStore.add(FlowEntry(slug: "pre-\(i)", name: "pre-\(i)", path: d, createdAt: t, sourceManifestId: nil))
+        }
+
+        // Build controller manually so its libraryStore points at the seeded file.
+        let stub = StubSynthesis(result: .success(outputDir: parent.appendingPathComponent("new-flow"), slug: "new-flow"))
+        try? FileManager.default.createDirectory(at: parent.appendingPathComponent("new-flow"), withIntermediateDirectories: true)
+        try? "x".write(to: parent.appendingPathComponent("new-flow/SKILL.md"), atomically: true, encoding: .utf8)
+        var hit = false
+        let c = FlowController(
+            screenpipeToken: "sp-test",
+            executableOverride: { _ in URL(fileURLWithPath: "/tmp/nonex") },
+            synthesisPrompt: "PROMPT $MANIFEST_PATH",
+            outputDir: parent,
+            manifestsDir: parent.appendingPathComponent("m"),
+            recoveryDir: parent.appendingPathComponent("r"),
+            library: FlowLibrary(fileURL: libFile),
+            synthesis: stub,
+            health: StubHealth(),
+            moments: StubMoments(),
+            settings: makeSettings(),
+            entitlement: { .init(isPro: false, flowLimit: 3) },
+            onFlowLimitReached: { hit = true },
+            now: { t },
+            hudShow: { _, _ in }, hudHide: { }, notify: { _ in },
+            onPreflightFailure: { _ in })
+        await c.start()
+        t = Date(timeIntervalSince1970: 1_000_030)
+        await c.stop()
+        // After stop+synthesis success, .reviewing with the new dir; library now has 4 (the existing 3 + the newly-added unsaved synthesis entry).
+        guard case .reviewing = c.flowState else { return XCTFail("expected .reviewing, got \(c.flowState)") }
+        // Save should be blocked — library count stays at 4 (3 pre + 1 synthesis-added), state stays .reviewing.
+        c.save(name: "blocked", description: nil, parameters: [])
+        XCTAssertTrue(hit, "onFlowLimitReached should fire")
+        guard case .reviewing = c.flowState else { return XCTFail("save should not change state when blocked") }
+    }
+
+    func test_save_allowedWhenPro() async {
+        var t = Date(timeIntervalSince1970: 1_000_000)
+        let parent = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("skills-\(UUID().uuidString)")
+        let oldDir = parent.appendingPathComponent("old-slug")
+        try? FileManager.default.createDirectory(at: oldDir, withIntermediateDirectories: true)
+        try? "x".write(to: oldDir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let c = makeController(synthesis: StubSynthesis(result: .success(outputDir: oldDir, slug: "old-slug")),
+                               entitlement: { .init(isPro: true, flowLimit: nil) }, now: { t })
+        await c.start(); t = Date(timeIntervalSince1970: 1_000_030); await c.stop()
+        c.save(name: "ok name", description: nil, parameters: [])
+        XCTAssertEqual(c.flowState, .idle)
     }
 }
