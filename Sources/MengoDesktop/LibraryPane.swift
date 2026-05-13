@@ -12,28 +12,30 @@ struct LibraryPane: View {
     }()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Library").font(Theme.title).foregroundStyle(Theme.primaryText)
-            if flow.library.isEmpty {
-                VStack(spacing: 6) {
-                    Image(systemName: "tray").font(.system(size: 28)).foregroundStyle(Theme.mutedText)
-                    Text("No flows yet").font(Theme.headline).foregroundStyle(Theme.primaryText)
-                    Text("Record one from the Flow tab.").font(Theme.body).foregroundStyle(Theme.secondaryText)
-                }
-                .frame(maxWidth: .infinity, minHeight: 220)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(flow.library.enumerated()), id: \.element.id) { idx, entry in
-                        row(entry)
-                        if idx < flow.library.count - 1 { Divider().overlay(Theme.separator) }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Library").font(Theme.title).foregroundStyle(Theme.primaryText)
+                if flow.library.isEmpty {
+                    VStack(spacing: 6) {
+                        Image(systemName: "tray").font(.system(size: 28)).foregroundStyle(Theme.mutedText)
+                        Text("No flows yet").font(Theme.headline).foregroundStyle(Theme.primaryText)
+                        Text("Record one from the Flow tab.").font(Theme.body).foregroundStyle(Theme.secondaryText)
                     }
+                    .frame(maxWidth: .infinity, minHeight: 220)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(flow.library.enumerated()), id: \.element.id) { idx, entry in
+                            row(entry)
+                            if idx < flow.library.count - 1 { Divider().overlay(Theme.separator) }
+                        }
+                    }
+                    .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.separator))
                 }
-                .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.separator))
             }
-            Spacer(minLength: 0)
+            .padding(28)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .padding(28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(LinearGradient(colors: [Theme.paneBackground, Theme.windowBackground], startPoint: .top, endPoint: .bottom))
         .alert("Delete this flow?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })) {
