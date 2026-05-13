@@ -64,6 +64,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static weak var sharedFlowController: FlowController?
     @MainActor static weak var sharedHotkeys: HotkeyManager?
     @MainActor static weak var sharedAccount: AccountStore?
+    @MainActor static weak var sharedSettings: SettingsStore?
+
+    /// Starts the recorder iff the user is signed in and has `startRecordingOnLaunch`
+    /// enabled. Safe to call multiple times — the recorder is idempotent.
+    @MainActor static func startRecorderIfWanted() {
+        guard let acct = sharedAccount, case .signedIn = acct.state else { return }
+        guard sharedSettings?.startRecordingOnLaunch != false else { return }
+        Task { await sharedRecorder?.start() }
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.appearance = NSAppearance(named: .darkAqua)
