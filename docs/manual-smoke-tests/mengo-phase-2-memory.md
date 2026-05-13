@@ -14,11 +14,14 @@ Run before tagging `mengo-v2-phase-2-memory`. Spec:
 ## App behaviour (run `open MengoDesktop.app` — needs a human at the machine)
 
 - [ ] Screen Recording + Microphone permission dialogs appear; grant both (toggle Mengo Desktop on in System Settings if prompted).
-- [ ] Within ~15 s the menu-bar glyph turns **green** and the Memory pane shows "● Recording" + `screenpipe vX.Y.Z`.
-- [ ] `~/.screenpipe/` starts filling with data; `~/Library/Logs/MengoDesktop/recorder.log` has screenpipe output.
-- [ ] Menu **Pause audio** → glyph yellow, pane shows "Audio paused"; **Resume audio** → green again.
-- [ ] Menu **Pause screen** → `pgrep screenpipe` shows the process gone, glyph yellow, pane "Screen paused"; **Resume screen** → process back, glyph green.
-- [ ] **Open data folder** opens `~/.screenpipe/`; **Open recorder log** opens `recorder.log` (menu and Memory pane both work).
-- [ ] `pkill screenpipe` → within ~30 s glyph **red**, pane shows the error + a **Restart recorder** button; clicking it (or the menu "Restart recorder") brings it back to green.
+- [ ] Within ~15 s the menu-bar glyph turns **green**. The Memory pane shows **one** status dot (no duplicate `●`), "Recording", the "everything stays on this Mac" subtitle, and a "Since … · …" uptime line.
+- [ ] No "Screen capture: ok / Audio capture: ok" rows anywhere — capture-status text appears *only* if `/health` reports a degraded status (then an amber banner shows).
+- [ ] "This session" shows four stat tiles — screens captured / words transcribed / displays / mic sources — with plausible numbers that climb over time; "Last capture · just now"; "Recordings folder · N GB" once the size is computed.
+- [ ] **Pause both** (pane or menu) → menu-bar glyph amber, pane shows "Paused", the button reads "Resume both"; clicking it → back to green "Recording". Pause audio / Pause screen individually still work too.
+- [ ] **Reveal recordings** opens `~/.screenpipe/` in Finder — and that folder path is *not* shown anywhere in the UI.
+- [ ] **View log** opens `~/Library/Logs/MengoDesktop/recorder.log` (pane and menu both work).
+- [ ] Nothing in the Memory pane or the menu says "screenpipe" or shows an engine version.
+- [ ] `~/.screenpipe/` fills with data; `~/Library/Logs/MengoDesktop/recorder.log` has screenpipe output.
+- [ ] `pkill screenpipe` → within ~30 s the pane shows "⚠ Recorder stopped" + the reason + a prominent **Restart recorder** button; clicking it (or the menu "Restart recorder") brings it back to green.
 - [ ] Close the main window → app stays in the Dock, glyph still green (recording continues).
 - [ ] **Quit** (⌘Q / menu) → app exits; `pgrep screenpipe` shows no orphan; `~/Library/Logs/MengoDesktop/app.log` has `app terminating`.
