@@ -34,6 +34,10 @@ struct MengoDesktopApp: App {
 /// surface — in particular `applicationWillTerminate` (logout/shutdown/⌘Q).
 /// In Phase 1 it just logs; Phase 2 hooks recorder shutdown in here.
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Set by `RecorderController.init()` (V1's bridge). Task 7 wires the
+    /// launch/terminate hooks that use it.
+    @MainActor static weak var sharedRecorder: RecorderController?
+
     func applicationWillTerminate(_ notification: Notification) {
         Log.line("app terminating")
     }
