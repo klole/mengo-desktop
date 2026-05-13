@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// The Memory product's pane — an at-a-glance view of the on-device recorder.
-/// No "screenpipe" branding, no raw paths, no engine version: this is "Mengo Memory".
+/// The Memory product's pane — the on-device recorder, at a glance. Dark brand
+/// palette; SF Symbol icons on every action; animated status + stats.
 struct MemoryPane: View {
     let recorder: RecorderController
+    @State private var appeared = false
 
     var body: some View {
         ScrollView {
@@ -11,16 +12,23 @@ struct MemoryPane: View {
                 hero
                 if let msg = degradedMessage { degradedBanner(msg) }
                 controls
-                Divider()
+                Divider().overlay(Theme.separator)
                 sessionSection
-                Divider()
+                Divider().overlay(Theme.separator)
                 footer
             }
             .padding(28)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
         }
-        .background(Theme.paneBackground)
+        .background(
+            LinearGradient(colors: [Theme.paneBackground, Theme.windowBackground],
+                           startPoint: .top, endPoint: .bottom)
+        )
+        .animation(.spring(duration: 0.35), value: degradedMessage)
         .task {
+            withAnimation(.easeOut(duration: 0.3)) { appeared = true }
             while !Task.isCancelled {
                 await recorder.refreshRecordingsSize()
                 try? await Task.sleep(for: .seconds(60))
@@ -31,8 +39,8 @@ struct MemoryPane: View {
     // MARK: - Hero
 
     @ViewBuilder private var hero: some View {
-        HStack(alignment: .top, spacing: 11) {
-            heroDot.padding(.top, 5)
+        HStack(alignment: .top, spacing: 12) {
+            heroDot.padding(.top, 4)
             VStack(alignment: .leading, spacing: 4) {
                 Text(heroTitle).font(Theme.title).foregroundStyle(heroColor)
                 if let subtitle = heroSubtitle {
@@ -40,24 +48,28 @@ struct MemoryPane: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let detail = heroDetail {
-                    Text(detail).font(Theme.caption).foregroundStyle(Theme.secondaryText)
+                    Text(detail).font(Theme.caption).foregroundStyle(Theme.mutedText)
                 }
             }
             Spacer(minLength: 0)
         }
+        .animation(.easeInOut(duration: 0.25), value: recorder.status)
     }
 
     @ViewBuilder private var heroDot: some View {
         switch recorder.status {
         case .recording:
-            Image(systemName: "circle.fill").font(.system(size: 12))
-                .foregroundStyle(Theme.recording).symbolEffect(.pulse)
+            ZStack {
+                Circle().fill(Theme.recording.opacity(0.20)).frame(width: 26, height: 26).blur(radius: 4)
+                Image(systemName: "circle.fill").font(.system(size: 12))
+                    .foregroundStyle(Theme.recording).symbolEffect(.pulse)
+            }
         case .audioPaused, .screenPaused, .bothPaused:
             Image(systemName: "circle.fill").font(.system(size: 12)).foregroundStyle(Theme.paused)
         case .starting:
             ProgressView().controlSize(.small)
         case .idle:
-            Image(systemName: "circle.dotted").font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
+            Image(systemName: "circle.dotted").font(.system(size: 12)).foregroundStyle(Theme.mutedText)
         case .error:
             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 12)).foregroundStyle(Theme.stopped)
         }
@@ -105,7 +117,6 @@ struct MemoryPane: View {
 
     // MARK: - Degraded banner
 
-    /// Non-nil only when recording but `/health` reports a non-"ok" capture status.
     private var degradedMessage: String? {
         guard recorder.status == .recording, let h = recorder.lastHealth else { return nil }
         if h.frameStatus != "ok" { return "Screen capture is degraded — open the log for details." }
@@ -120,27 +131,39 @@ struct MemoryPane: View {
             Spacer(minLength: 0)
         }
         .padding(10)
-        .background(Theme.paused.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.separator))
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 
     // MARK: - Controls
 
     @ViewBuilder private var controls: some View {
         if case .error = recorder.status {
-            Button("Restart recorder") { Task { await recorder.restartAfterCrash() } }
-                .buttonStyle(.borderedProminent)
+            Button { Task { await recorder.restartAfterCrash() } } label: {
+                Label("Restart recorder", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent)
         } else {
             HStack(spacing: 10) {
-                Button(bothTitle) { Task { await bothAction() } }
-                    .buttonStyle(.bordered)
-                    .disabled(disableControls)
-                Button(audioTitle) { Task { await audioAction() } }
-                    .disabled(disableControls)
-                Button(screenTitle) { Task { await screenAction() } }
-                    .disabled(disableControls)
+                Button { Task { await bothAction() } } label: {
+                    Label(bothTitle, systemImage: recorder.status == .bothPaused ? "play.circle.fill" : "pause.circle.fill")
+                }
+                .buttonStyle(.borderedProminent).tint(Theme.accent).disabled(disableControls)
+                Button { Task { await audioAction() } } label: {
+                    Label(audioTitle, systemImage: audioPausedNow ? "mic" : "mic.slash")
+                }
+                .buttonStyle(.bordered).disabled(disableControls)
+                Button { Task { await screenAction() } } label: {
+                    Label(screenTitle, systemImage: screenPausedNow ? "display" : "display.slash")
+                }
+                .buttonStyle(.bordered).disabled(disableControls)
                 Spacer(minLength: 12)
-                Button("Reveal recordings") { NSWorkspace.shared.open(recorder.dataFolderURL) }
-                    .buttonStyle(.link)
+                Button { NSWorkspace.shared.open(recorder.dataFolderURL) } label: {
+                    Label("Reveal recordings", systemImage: "folder")
+                }
+                .buttonStyle(.link)
             }
         }
     }
@@ -148,20 +171,14 @@ struct MemoryPane: View {
     private var disableControls: Bool {
         switch recorder.status { case .starting, .idle, .error: return true; default: return false }
     }
+    private var audioPausedNow: Bool { switch recorder.status { case .audioPaused, .bothPaused: return true; default: return false } }
+    private var screenPausedNow: Bool { switch recorder.status { case .screenPaused, .bothPaused: return true; default: return false } }
     private var bothTitle: String { recorder.status == .bothPaused ? "Resume both" : "Pause both" }
-    private var audioTitle: String {
-        switch recorder.status { case .audioPaused, .bothPaused: return "Resume audio"; default: return "Pause audio" }
-    }
-    private var screenTitle: String {
-        switch recorder.status { case .screenPaused, .bothPaused: return "Resume screen"; default: return "Pause screen" }
-    }
+    private var audioTitle: String { audioPausedNow ? "Resume audio" : "Pause audio" }
+    private var screenTitle: String { screenPausedNow ? "Resume screen" : "Pause screen" }
     private func bothAction() async { recorder.status == .bothPaused ? await recorder.resumeAll() : await recorder.pauseAll() }
-    private func audioAction() async {
-        switch recorder.status { case .audioPaused, .bothPaused: await recorder.resumeAudio(); default: await recorder.pauseAudio() }
-    }
-    private func screenAction() async {
-        switch recorder.status { case .screenPaused, .bothPaused: await recorder.resumeScreen(); default: await recorder.pauseScreen() }
-    }
+    private func audioAction() async { audioPausedNow ? await recorder.resumeAudio() : await recorder.pauseAudio() }
+    private func screenAction() async { screenPausedNow ? await recorder.resumeScreen() : await recorder.pauseScreen() }
 
     // MARK: - This session
 
@@ -169,10 +186,10 @@ struct MemoryPane: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("This session").font(Theme.headline).foregroundStyle(Theme.primaryText)
             HStack(spacing: 12) {
-                StatTile(value: intOrDash(recorder.lastHealth?.pipeline?.framesCaptured), label: "screens\ncaptured")
-                StatTile(value: intOrDash(recorder.lastHealth?.audioPipeline?.totalWords), label: "words\ntranscribed")
-                StatTile(value: intOrDash(recorder.lastHealth?.monitors?.count), label: "displays")
-                StatTile(value: intOrDash(micSourceCount), label: "mic\nsources")
+                StatTile(value: framesCaptured, label: "screens\ncaptured")
+                StatTile(value: totalWords, label: "words\ntranscribed")
+                StatTile(value: displayCount, label: "displays")
+                StatTile(value: micCount, label: "mic\nsources")
             }
             HStack(spacing: 24) {
                 if let last = lastCaptureText { metaLine("Last capture", last) }
@@ -183,48 +200,58 @@ struct MemoryPane: View {
     }
 
     private func metaLine(_ label: String, _ value: String) -> some View {
-        (Text(label + " · ").foregroundStyle(Theme.secondaryText) + Text(value).foregroundStyle(Theme.primaryText))
+        (Text(label + " · ").foregroundStyle(Theme.mutedText) + Text(value).foregroundStyle(Theme.secondaryText))
             .font(Theme.caption)
     }
 
-    private var micSourceCount: Int? {
-        recorder.lastHealth?.audioPipeline?.audioDevices?.filter { $0.lowercased().contains("input") }.count
-    }
+    private var framesCaptured: Int? { recorder.lastHealth?.pipeline?.framesCaptured }
+    private var totalWords: Int? { recorder.lastHealth?.audioPipeline?.totalWords }
+    private var displayCount: Int? { recorder.lastHealth?.monitors?.count }
+    private var micCount: Int? { recorder.lastHealth?.audioPipeline?.audioDevices?.filter { $0.lowercased().contains("input") }.count }
 
     private var lastCaptureText: String? {
         guard let s = recorder.lastHealth?.lastFrameTimestamp, let d = MemoryFormatting.parseTimestamp(s) else { return nil }
         return MemoryFormatting.relative(from: d)
     }
 
-    private func intOrDash(_ n: Int?) -> String { n.map(String.init) ?? "—" }
-
     // MARK: - Footer
 
     private var footer: some View {
         HStack(alignment: .firstTextBaseline) {
             Text("Mengo Memory keeps a private, on-device record of what you see and hear. Nothing is uploaded.")
-                .font(Theme.caption).foregroundStyle(Theme.secondaryText)
+                .font(Theme.caption).foregroundStyle(Theme.mutedText)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 12)
-            Button("View log") { NSWorkspace.shared.open(recorder.recorderLogURL) }
-                .buttonStyle(.link).font(Theme.caption)
+            Button { NSWorkspace.shared.open(recorder.recorderLogURL) } label: {
+                Label("View log", systemImage: "doc.text")
+            }
+            .buttonStyle(.link).font(Theme.caption)
         }
     }
 }
 
-/// A small "big number + small label" tile for the "This session" row.
+/// A "big number + small label" tile for the "This session" row. Rolls its
+/// number with `.numericText`; lifts to `elevatedBackground` on hover.
 private struct StatTile: View {
-    let value: String
+    let value: Int?
     let label: String
+    @State private var hover = false
 
     var body: some View {
         VStack(spacing: 4) {
-            Text(value).font(.system(size: 22, weight: .semibold)).foregroundStyle(Theme.primaryText)
-            Text(label).font(.system(size: 10)).foregroundStyle(Theme.secondaryText)
+            Text(value.map(String.init) ?? "—")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(Theme.primaryText)
+                .contentTransition(.numericText())
+                .animation(.spring(duration: 0.4), value: value)
+            Text(label).font(.system(size: 10)).foregroundStyle(Theme.mutedText)
                 .multilineTextAlignment(.center).fixedSize()
         }
         .frame(minWidth: 84)
         .padding(.vertical, 12).padding(.horizontal, 10)
-        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: 10))
+        .background(hover ? Theme.elevatedBackground : Theme.cardBackground, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(hover ? Theme.accentGlow : Theme.separator))
+        .onHover { hover = $0 }
+        .animation(.easeInOut(duration: 0.15), value: hover)
     }
 }
