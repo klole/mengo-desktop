@@ -32,4 +32,9 @@ enum Log {
     static func line(_ message: String) {
         print("[\(Date())] \(message)")
     }
+
+    /// `~/Library/Logs/MengoDesktop/synthesis-<id>.log` — per-synthesis subprocess output.
+    static func synthesisLogURL(id: String) -> URL {
+        directory.appendingPathComponent("synthesis-\(id).log")
+    }
 }

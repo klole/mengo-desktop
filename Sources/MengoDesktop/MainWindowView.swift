@@ -9,6 +9,7 @@ import SwiftUI
 struct MainWindowView: View {
     let appState: AppState
     let recorder: RecorderController
+    let flow: FlowController
 
     var body: some View {
         NavigationSplitView {
@@ -29,8 +30,10 @@ struct MainWindowView: View {
         } detail: {
             Group {
                 switch appState.selectedSection {
-                case .memory: MemoryPane(recorder: recorder)
-                default:      ComingSoonPane(section: appState.selectedSection)
+                case .memory:  MemoryPane(recorder: recorder)
+                case .flow:    FlowPane(flow: flow)
+                case .library: LibraryPane(flow: flow)
+                default:       ComingSoonPane(section: appState.selectedSection)
                 }
             }
             .id(appState.selectedSection)

@@ -1,12 +1,14 @@
 import SwiftUI
 import AppKit
 
-/// The dropdown shown from the menu bar item. In Phase 2 the "Memory" group is
-/// live (pause/resume, open folder/log, restart-on-error); the "Flow" group is
-/// still disabled (Phase 3); Library/Studio/Settings navigate the main window.
+/// The dropdown shown from the menu bar item. The "Memory" group has the
+/// pause/resume + reveal/log controls; the "Flow" group has Start/Stop recording
+/// (Phase 3a — "Grab last N minutes" stays disabled until 3b);
+/// Library/Studio/Settings navigate the main window.
 struct MenuBarContent: View {
     let appState: AppState
     let recorder: RecorderController
+    let flow: FlowController
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -24,9 +26,20 @@ struct MenuBarContent: View {
         Button { NSWorkspace.shared.open(recorder.dataFolderURL) } label: { Label("Reveal recordings", systemImage: "folder") }
         Button { NSWorkspace.shared.open(recorder.recorderLogURL) } label: { Label("View log", systemImage: "doc.text") }
 
-        // MARK: Flow (Phase 3)
+        // MARK: Flow
         Text("Flow").font(.caption).foregroundStyle(.secondary)
-        Button("Start recording…") { }.disabled(true)
+        switch flow.flowState {
+        case .idle, .error:
+            Button("Start recording…") { Task { await flow.start() } }
+                .keyboardShortcut("r", modifiers: [.control, .option])
+        case .recording:
+            Button("Stop recording") { Task { await flow.stop() } }
+                .keyboardShortcut("r", modifiers: [.control, .option])
+        case .synthesizing:
+            Button("Synthesizing skill…") { }.disabled(true)
+        case .reviewing:
+            Button("Reviewing skill…") { reveal(.flow) }
+        }
         Button("Grab last 5 minutes…") { }.disabled(true)
 
         Divider()

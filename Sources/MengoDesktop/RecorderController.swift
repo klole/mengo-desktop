@@ -22,6 +22,11 @@ final class RecorderController {
     private(set) var runningAudioDeviceNames: [String]?
     private(set) var runningAudioDisabled = false
 
+    /// The per-launch auth token the bundled screenpipe was started with — Flow
+    /// passes it as `SCREENPIPE_API_KEY` to `claude -p` so the screenpipe MCP can
+    /// query Mengo's recorder.
+    let screenpipeToken: String
+
     @ObservationIgnored private let process: RecorderProcessControlling
     @ObservationIgnored private let api: RecorderHealthAPI
     @ObservationIgnored private let ensureBinaryClosure: () throws -> URL
@@ -43,6 +48,7 @@ final class RecorderController {
         sourceCatalog: RecordingSourceCatalog = ScreenpipeCLICatalog()
     ) {
         let token = RecorderProcess.newToken()
+        self.screenpipeToken = token
         self.process = processFactory(token)
         self.api = apiFactory(token)
         self.ensureBinaryClosure = ensureBinary
