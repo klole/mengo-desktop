@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// The main window: a `NavigationSplitView` with a five-row sidebar and a
-/// `ComingSoonPane` in the detail column. The sidebar selection lives in
-/// `AppState` so the menu bar can drive it too.
+/// The main window: a `NavigationSplitView` with a five-row sidebar; the detail
+/// column shows the section's pane (real `MemoryPane` for `.memory`, placeholders
+/// for the rest in Phase 2). Sidebar selection lives in `AppState`.
 struct MainWindowView: View {
     let appState: AppState
+    let recorder: RecorderController
 
     var body: some View {
         NavigationSplitView {
@@ -29,13 +30,13 @@ struct MainWindowView: View {
             .navigationTitle("Mengo")
             .frame(minWidth: 190)
         } detail: {
-            ComingSoonPane(section: appState.selectedSection)
+            switch appState.selectedSection {
+            case .memory: MemoryPane(recorder: recorder)
+            default:      ComingSoonPane(section: appState.selectedSection)
+            }
         }
     }
 
-    /// `List` single-selection wants a `Binding<SidebarSection?>`; `AppState`
-    /// keeps a non-optional `selectedSection`. Bridge here, ignoring any
-    /// transient deselect-to-`nil`.
     private var selectionBinding: Binding<SidebarSection?> {
         Binding(
             get: { appState.selectedSection },
