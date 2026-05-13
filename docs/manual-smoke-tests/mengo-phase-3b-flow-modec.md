@@ -23,7 +23,7 @@ Run before tagging `mengo-v2-phase-3b-flow-modec`. Spec:
 - [ ] The **Look back** picker (15 min / 30 min / 1 hour / 2 hours) re-queries; **Reload** re-queries.
 - [ ] Click a moment → it highlights orange; a "Selected: 2:14 PM → now (Nm Ns)" caption appears; **Begin from here** enables.
 - [ ] With a look-back range that has no screenpipe data → "No screenpipe data in that range. Try a longer look-back." and **Begin from here** stays disabled.
-- [ ] **Cancel** (button, the menu's "Cancel timeline picker", or ⌃⌥G again) → back to the Flow idle pane.
+- [ ] **Cancel** (button, the menu's "Cancel timeline picker", or ⌃⌥R) → back to the Flow idle pane.
 
 ### Begin from here → retroactive recording
 

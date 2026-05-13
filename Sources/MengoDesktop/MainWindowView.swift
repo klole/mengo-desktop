@@ -37,14 +37,9 @@ struct MainWindowView: View {
                 }
             }
             .id(appState.selectedSection)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)   // detail always fills, so the window stays freely resizable
             .transition(.opacity)
             .animation(.easeInOut(duration: 0.22), value: appState.selectedSection)
         }
-        // Pin a sane minimum so the window stays resizable on every tab regardless of
-        // a pane's intrinsic content size (with .windowResizability(.contentMinSize),
-        // the window's minimum tracks this content minimum).
-        .frame(minWidth: 760, minHeight: 480)
     }
 
     private func sidebarRow(_ section: SidebarSection) -> some View {

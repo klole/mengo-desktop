@@ -43,12 +43,13 @@ struct MenuBarContent: View {
             Button("Reviewing skill…") { reveal(.flow) }
         }
         switch flow.flowState {
-        case .idle, .error:
+        case .idle:
             Button("Grab last 5 minutes…") { flow.beginBrowsingTimeline(); reveal(.flow) }
                 .keyboardShortcut("g", modifiers: [.control, .option])
         case .browsingTimeline:
             Button("Cancel timeline picker") { flow.cancelBrowsingTimeline() }
         default:
+            // `beginBrowsingTimeline()` only fires from `.idle` — don't offer it elsewhere.
             Button("Grab last 5 minutes…") { }.disabled(true)
         }
 

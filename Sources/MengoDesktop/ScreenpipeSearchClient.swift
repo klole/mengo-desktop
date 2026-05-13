@@ -69,7 +69,7 @@ struct ScreenpipeSearchClient: MomentIndexing {
             guard ((row["type"] as? String)?.lowercased() == "ocr"),
                   let content = row["content"] as? [String: Any],
                   let ts = content["timestamp"] as? String,
-                  let date = parseISO8601(ts) else { continue }
+                  let date = MemoryFormatting.parseTimestamp(ts) else { continue }
             out.append(Moment(timestamp: date,
                               appName: (content["app_name"] as? String) ?? "",
                               windowName: (content["window_name"] as? String) ?? ""))
@@ -86,14 +86,6 @@ struct ScreenpipeSearchClient: MomentIndexing {
             out.append(m); last = m.timestamp
         }
         return out
-    }
-
-    /// screenpipe emits ISO8601 with-or-without fractional seconds. Try fractional, fall back.
-    static func parseISO8601(_ s: String) -> Date? {
-        let frac = ISO8601DateFormatter(); frac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = frac.date(from: s) { return d }
-        let plain = ISO8601DateFormatter(); plain.formatOptions = [.withInternetDateTime]
-        return plain.date(from: s)
     }
 
     private static var iso: ISO8601DateFormatter {
