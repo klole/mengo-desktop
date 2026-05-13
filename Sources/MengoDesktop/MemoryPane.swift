@@ -163,7 +163,7 @@ struct MemoryPane: View {
                 Button { NSWorkspace.shared.open(recorder.dataFolderURL) } label: {
                     Label("Reveal recordings", systemImage: "folder")
                 }
-                .buttonStyle(.link)
+                .buttonStyle(.plain).foregroundStyle(Theme.accent)
             }
         }
     }
