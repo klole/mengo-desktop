@@ -128,4 +128,24 @@ final class RecorderControllerTests: XCTestCase {
         await c.restartAfterCrash()
         XCTAssertEqual(c.status, .starting)
     }
+
+    func test_pauseAll_thenResumeAll() async {
+        let api = StubAPI()
+        let proc = StubProcess()
+        let c = makeController(process: proc, api: api)
+        await c.start()
+        await eventually { c.status == .recording }
+        await c.pauseAll()
+        XCTAssertEqual(c.status, .bothPaused)
+        let stops = await api.audioStopCount
+        XCTAssertEqual(stops, 1)
+        XCTAssertEqual(proc.stopCount, 1)
+        let startsBefore = proc.startCount
+        await c.resumeAll()
+        await eventually { c.status == .recording }
+        XCTAssertEqual(proc.startCount, startsBefore + 1)
+        // resumeAll cleared the audio-paused flag, so the restarted recorder isn't re-paused.
+        let stopsAfter = await api.audioStopCount
+        XCTAssertEqual(stopsAfter, 1)
+    }
 }
