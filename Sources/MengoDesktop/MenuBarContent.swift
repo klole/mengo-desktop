@@ -35,12 +35,22 @@ struct MenuBarContent: View {
         case .recording:
             Button("Stop recording") { Task { await flow.stop() } }
                 .keyboardShortcut("r", modifiers: [.control, .option])
+        case .browsingTimeline:
+            Button("Choosing a start point…") { reveal(.flow) }
         case .synthesizing:
             Button("Synthesizing skill…") { }.disabled(true)
         case .reviewing:
             Button("Reviewing skill…") { reveal(.flow) }
         }
-        Button("Grab last 5 minutes…") { }.disabled(true)
+        switch flow.flowState {
+        case .idle, .error:
+            Button("Grab last 5 minutes…") { flow.beginBrowsingTimeline(); reveal(.flow) }
+                .keyboardShortcut("g", modifiers: [.control, .option])
+        case .browsingTimeline:
+            Button("Cancel timeline picker") { flow.cancelBrowsingTimeline() }
+        default:
+            Button("Grab last 5 minutes…") { }.disabled(true)
+        }
 
         Divider()
         Button("Library") { reveal(.library) }

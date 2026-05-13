@@ -16,6 +16,10 @@ final class FlowControllerTests: XCTestCase {
         var audioPaused = false
         func snapshot() async -> (healthy: Bool, audioPaused: Bool) { (healthy, audioPaused) }
     }
+    struct StubMoments: MomentIndexing {
+        var moments: [Moment] = []
+        func momentIndex(from: Date, to: Date, limit: Int) async throws -> [Moment] { moments }
+    }
 
     private func tmpDir() -> URL {
         let u = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("flowctl-\(UUID().uuidString)")
@@ -26,6 +30,7 @@ final class FlowControllerTests: XCTestCase {
     private func makeController(
         synthesis: SynthesisRunning = StubSynthesis(result: .failure(message: "stub")),
         health: FlowPreflightHealth = StubHealth(),
+        moments: MomentIndexing = StubMoments(),
         claudeExecutable: URL? = URL(fileURLWithPath: "/tmp/does-not-exist-claude"),
         now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_700_000_000) }
     ) -> FlowController {
@@ -40,6 +45,7 @@ final class FlowControllerTests: XCTestCase {
             library: FlowLibrary(fileURL: base.appendingPathComponent("library.json")),
             synthesis: synthesis,
             health: health,
+            moments: moments,
             now: now,
             hudShow: { _, _ in }, hudHide: { }, notify: { _ in },
             onPreflightFailure: { _ in })
@@ -181,5 +187,53 @@ final class FlowControllerTests: XCTestCase {
         await c.synthesizeRecovery(manifestURL: m)
         guard case .reviewing = c.flowState else { return XCTFail("expected .reviewing, got \(c.flowState)") }
         XCTAssertNil(c.checkForRecovery())   // recovery dir cleared after consuming
+    }
+
+    // MARK: Mode C — retroactive ("grab last N minutes")
+
+    func test_beginBrowsingTimeline_fromIdle() {
+        let c = makeController()
+        c.beginBrowsingTimeline()
+        XCTAssertEqual(c.flowState, .browsingTimeline)
+    }
+    func test_beginBrowsingTimeline_noopWhenNotIdle() async {
+        let c = makeController()
+        await c.start()                       // → .recording
+        c.beginBrowsingTimeline()
+        guard case .recording = c.flowState else { return XCTFail("should still be .recording") }
+    }
+    func test_cancelBrowsingTimeline_returnsToIdle() {
+        let c = makeController()
+        c.beginBrowsingTimeline()
+        c.cancelBrowsingTimeline()
+        XCTAssertEqual(c.flowState, .idle)
+    }
+    func test_startRetroactive_entersRecording_withRetroactiveSession() async {
+        let t = Date(timeIntervalSince1970: 1_000_000)
+        let c = makeController(now: { t })
+        c.beginBrowsingTimeline()
+        let bufferStart = Date(timeIntervalSince1970: 999_400)   // 10 min earlier
+        await c.startRetroactive(bufferStart: bufferStart)
+        guard case .recording(let s) = c.flowState else { return XCTFail("expected .recording, got \(c.flowState)") }
+        XCTAssertEqual(s.mode, .retroactive)
+        XCTAssertEqual(s.bufferRangeStart, bufferStart)
+        XCTAssertEqual(s.activeRecordingStart, t)
+    }
+    func test_startRetroactive_blockedByPreflight_staysBrowsing() async {
+        let c = makeController(claudeExecutable: nil)   // → .claudeNotFound; onPreflightFailure is a no-op in tests
+        c.beginBrowsingTimeline()
+        await c.startRetroactive(bufferStart: Date())
+        XCTAssertEqual(c.flowState, .browsingTimeline)
+    }
+    func test_startRetroactive_noopWhenNotBrowsing() async {
+        let c = makeController()
+        await c.startRetroactive(bufferStart: Date())   // we're .idle, not .browsingTimeline
+        XCTAssertEqual(c.flowState, .idle)
+    }
+    func test_loadMoments_returnsStubList() async throws {
+        let m = [Moment(timestamp: Date(timeIntervalSince1970: 1), appName: "A", windowName: "w")]
+        let c = makeController(moments: StubMoments(moments: m))
+        let got = try await c.loadMoments(lookbackMinutes: 30)
+        XCTAssertEqual(got, m)
     }
 }
