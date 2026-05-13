@@ -5,6 +5,7 @@ import AppKit
 @MainActor
 struct MengoDesktopApp: App {
     @State private var appState = AppState()
+    @State private var recorder = RecorderController()
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
@@ -13,12 +14,14 @@ struct MengoDesktopApp: App {
 
     var body: some Scene {
         Window("Mengo Desktop", id: "main") {
-            MainWindowView(appState: appState)
+            MainWindowView(appState: appState, recorder: recorder)
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 840, height: 560)
 
         MenuBarExtra {
+            // MenuBarContent still has its Phase-1 init(appState:) here — Task 8
+            // changes it to init(appState:recorder:) and the label below to MenuBarLabel.
             MenuBarContent(appState: appState)
         } label: {
             HStack(spacing: 4) {
@@ -30,15 +33,20 @@ struct MengoDesktopApp: App {
     }
 }
 
-/// Carries the lifecycle callbacks SwiftUI's scene phase doesn't reliably
-/// surface — in particular `applicationWillTerminate` (logout/shutdown/⌘Q).
-/// In Phase 1 it just logs; Phase 2 hooks recorder shutdown in here.
+/// Carries the lifecycle callbacks SwiftUI's scene phase doesn't reliably surface.
+/// Starts the recorder on launch, stops it on quit. `sharedRecorder` is set by
+/// `RecorderController.init()` (V1's bridge pattern).
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    /// Set by `RecorderController.init()` (V1's bridge). Task 7 wires the
-    /// launch/terminate hooks that use it.
     @MainActor static weak var sharedRecorder: RecorderController?
 
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        Task { await AppDelegate.sharedRecorder?.start() }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
-        Log.line("app terminating")
+        MainActor.assumeIsolated {
+            AppDelegate.sharedRecorder?.stop()
+            Log.line("app terminating")
+        }
     }
 }
