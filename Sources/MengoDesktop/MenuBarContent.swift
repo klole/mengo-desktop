@@ -8,6 +8,7 @@ import AppKit
 struct MenuBarContent: View {
     let appState: AppState
     let recorder: RecorderController
+    let account: AccountStore
     let flow: FlowController
     @Environment(\.openWindow) private var openWindow
 
