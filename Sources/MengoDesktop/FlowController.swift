@@ -296,8 +296,11 @@ final class FlowController {
     }
 
     func retrySynthesis() async {
-        guard case .error = flowState, let session = lastSession else { return }
-        await runSynthesis(session: session, regen: nil)
+        guard case .error = flowState else { return }
+        // Normal failures keep `lastSession`, so re-run from the session (rewrites the
+        // manifest). A failed *recovery* synthesis has no session — re-run its manifest directly.
+        if let session = lastSession { await runSynthesis(session: session, regen: nil) }
+        else if let manifestURL = lastManifestURL { await synthesize(manifestURL: manifestURL) }
     }
 
     func discard() {
