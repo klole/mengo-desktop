@@ -20,14 +20,9 @@ struct MengoDesktopApp: App {
         .defaultSize(width: 840, height: 560)
 
         MenuBarExtra {
-            // MenuBarContent still has its Phase-1 init(appState:) here — Task 8
-            // changes it to init(appState:recorder:) and the label below to MenuBarLabel.
-            MenuBarContent(appState: appState)
+            MenuBarContent(appState: appState, recorder: recorder)
         } label: {
-            HStack(spacing: 4) {
-                Text("Mengo")
-                Image(systemName: "circle.dotted")
-            }
+            MenuBarLabel(status: recorder.status)
         }
         .menuBarExtraStyle(.menu)
     }
