@@ -24,6 +24,17 @@ enum Theme {
     /// De-emphasised / secondary text.
     static let secondaryText = Color(nsColor: .secondaryLabelColor)
 
+    // MARK: - Status & surfaces
+
+    /// Recorder is healthy and running.
+    static let recording = Color.green
+    /// Recorder is paused (audio, screen, or both).
+    static let paused = Color(red: 0.92, green: 0.62, blue: 0.10)   // a calmer amber than .yellow
+    /// Recorder stopped / errored.
+    static let stopped = Color.red
+    /// Subtle elevated fill for cards/tiles within a pane.
+    static let cardBackground = Color(nsColor: .controlBackgroundColor)
+
     // MARK: - Typography
 
     static let largeTitle = Font.system(.largeTitle, design: .default).weight(.semibold)
