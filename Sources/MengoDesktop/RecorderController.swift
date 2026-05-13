@@ -12,6 +12,7 @@ final class RecorderController {
     private(set) var status: RecorderStatus = .idle
     private(set) var screenpipeVersion: String?
     private(set) var lastHealth: ScreenpipeHealth?
+    private(set) var recordingsSizeBytes: Int64?
 
     @ObservationIgnored private let process: RecorderProcessControlling
     @ObservationIgnored private let api: RecorderHealthAPI
@@ -44,6 +45,12 @@ final class RecorderController {
     var recorderLogURL: URL {
         FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first!
             .appendingPathComponent("Logs/MengoDesktop/recorder.log")
+    }
+
+    /// When the current recording session started, derived from screenpipe's reported uptime.
+    var recordingSince: Date? {
+        guard status == .recording, let up = lastHealth?.pipeline?.uptimeSecs else { return nil }
+        return Date().addingTimeInterval(-up)
     }
 
     // MARK: - Lifecycle
@@ -129,6 +136,37 @@ final class RecorderController {
             let binaryURL = try ensureBinaryClosure()
             await spawnAndPoll(binaryURL: binaryURL)
         } catch { status = .error("restart failed: \(error)") }
+    }
+
+    func pauseAll() async {
+        await pauseAudio()      // stop audio on the still-live process…
+        await pauseScreen()     // …then kill the process
+    }
+
+    func resumeAll() async {
+        audioPaused = false     // clear first so resumeScreen() doesn't re-pause audio
+        await resumeScreen()
+    }
+
+    // MARK: - Recordings size
+
+    /// Recompute the total size of `~/.screenpipe/` off the main actor. Cheap for typical
+    /// folders; the Memory pane calls this when it appears and every ~60 s while visible.
+    func refreshRecordingsSize() async {
+        let dir = dataFolderURL
+        let size = await Task.detached(priority: .utility) { () -> Int64? in
+            guard let en = FileManager.default.enumerator(
+                at: dir, includingPropertiesForKeys: [.totalFileAllocatedSizeKey, .isRegularFileKey],
+                options: [.skipsHiddenFiles]) else { return nil }
+            var total: Int64 = 0
+            while let url = en.nextObject() as? URL {
+                guard let vals = try? url.resourceValues(forKeys: [.totalFileAllocatedSizeKey, .isRegularFileKey]),
+                      vals.isRegularFile == true else { continue }
+                total += Int64(vals.totalFileAllocatedSize ?? 0)
+            }
+            return total
+        }.value
+        if let size { recordingsSizeBytes = size }
     }
 
     // MARK: - Health polling
