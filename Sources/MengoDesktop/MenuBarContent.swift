@@ -15,13 +15,14 @@ struct MenuBarContent: View {
 
         // MARK: Memory
         Text("Memory").font(.caption).foregroundStyle(.secondary)
+        bothItem
         audioItem
         screenItem
         if case .error = recorder.status {
             Button("Restart recorder") { Task { await recorder.restartAfterCrash() } }
         }
-        Button("Open data folder") { NSWorkspace.shared.open(recorder.dataFolderURL) }
-        Button("Open recorder log") { NSWorkspace.shared.open(recorder.recorderLogURL) }
+        Button("Reveal recordings") { NSWorkspace.shared.open(recorder.dataFolderURL) }
+        Button("View log") { NSWorkspace.shared.open(recorder.recorderLogURL) }
 
         // MARK: Flow (Phase 3)
         Text("Flow").font(.caption).foregroundStyle(.secondary)
@@ -36,6 +37,17 @@ struct MenuBarContent: View {
         Divider()
         Button("Quit Mengo Desktop") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
+    }
+
+    @ViewBuilder private var bothItem: some View {
+        switch recorder.status {
+        case .bothPaused:
+            Button("Resume both") { Task { await recorder.resumeAll() } }
+        case .recording, .audioPaused, .screenPaused:
+            Button("Pause both") { Task { await recorder.pauseAll() } }
+        case .starting, .idle, .error:
+            Button("Pause both") { }.disabled(true)
+        }
     }
 
     @ViewBuilder private var audioItem: some View {
@@ -93,9 +105,9 @@ struct MenuBarLabel: View {
     }
     private var color: Color {
         switch status {
-        case .recording: return .green
-        case .audioPaused, .screenPaused, .bothPaused: return .yellow
-        case .error: return .red
+        case .recording: return Theme.recording
+        case .audioPaused, .screenPaused, .bothPaused: return Theme.paused
+        case .error: return Theme.stopped
         case .starting, .idle: return .secondary
         }
     }
