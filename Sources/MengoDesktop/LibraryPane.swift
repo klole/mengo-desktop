@@ -45,23 +45,25 @@ struct LibraryPane: View {
     }
 
     private func row(_ entry: FlowEntry) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.name).font(Theme.body.weight(.medium)).foregroundStyle(entry.exists ? Theme.primaryText : Theme.mutedText)
+                    .lineLimit(1).truncationMode(.middle)
                 Text(entry.exists ? Self.dateFmt.string(from: entry.createdAt) : "missing — removed outside Mengo")
                     .font(Theme.caption).foregroundStyle(Theme.mutedText)
             }
             Spacer(minLength: 8)
+            // Compact icon actions (with tooltips) — keeps rows narrow so the window stays freely resizable.
             if entry.exists {
-                Button { NSWorkspace.shared.activateFileViewerSelecting([entry.path]) } label: { Label("Open in Finder", systemImage: "folder") }
-                    .buttonStyle(.plain).foregroundStyle(Theme.accent).font(Theme.caption)
-                Button { flow.reopenInReview(slug: entry.slug) } label: { Label("Re-open in Review", systemImage: "square.and.pencil") }
-                    .buttonStyle(.plain).foregroundStyle(Theme.accent).font(Theme.caption)
-                Button { pendingDelete = entry } label: { Label("Delete", systemImage: "trash") }
-                    .buttonStyle(.plain).foregroundStyle(Theme.mutedText).font(Theme.caption)
+                Button { flow.reopenInReview(slug: entry.slug) } label: { Image(systemName: "square.and.pencil") }
+                    .help("Re-open in Review").buttonStyle(.plain).foregroundStyle(Theme.accent)
+                Button { NSWorkspace.shared.activateFileViewerSelecting([entry.path]) } label: { Image(systemName: "folder") }
+                    .help("Open in Finder").buttonStyle(.plain).foregroundStyle(Theme.accent)
+                Button { pendingDelete = entry } label: { Image(systemName: "trash") }
+                    .help("Delete").buttonStyle(.plain).foregroundStyle(Theme.mutedText)
             } else {
-                Button { flow.deleteFlow(slug: entry.slug) } label: { Text("Remove from list") }
-                    .buttonStyle(.plain).foregroundStyle(Theme.mutedText).font(Theme.caption)
+                Button { flow.deleteFlow(slug: entry.slug) } label: { Image(systemName: "minus.circle") }
+                    .help("Remove from list").buttonStyle(.plain).foregroundStyle(Theme.mutedText)
             }
         }
         .padding(.vertical, 10).padding(.horizontal, 12)

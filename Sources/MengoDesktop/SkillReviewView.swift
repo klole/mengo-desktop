@@ -36,6 +36,7 @@ struct SkillReviewView: View {
             Divider().overlay(Theme.separator)
             footer
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(LinearGradient(colors: [Theme.paneBackground, Theme.windowBackground], startPoint: .top, endPoint: .bottom))
         .task { load() }
     }
