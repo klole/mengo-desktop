@@ -2,6 +2,22 @@
   "status": "healthy",
   "frame_status": "ok",
   "audio_status": "ok",
-  "last_frame_timestamp": "2026-05-12T19:04:58.000Z",
-  "message": "all systems nominal"
+  "version": "0.3.327",
+  "message": "all systems are functioning normally.",
+  "last_frame_timestamp": "2026-05-12T18:31:18-06:00",
+  "last_audio_timestamp": "2026-05-12T18:31:18-06:00",
+  "monitors": ["Display 1 (1728x1117)", "Display 2 (3440x1440)"],
+  "pipeline": {
+    "uptime_secs": 257.135986583,
+    "frames_captured": 53,
+    "frames_db_written": 53,
+    "capture_fps_actual": 0.206,
+    "frame_drop_rate": 0.0
+  },
+  "audio_pipeline": {
+    "uptime_secs": 257.135988833,
+    "total_words": 225,
+    "transcriptions_completed": 16,
+    "audio_devices": ["R-Phonak hearing aid (input)", "System Audio (output)"]
+  }
 }
