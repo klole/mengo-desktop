@@ -13,6 +13,11 @@ Run before tagging `mengo-v2-phase-2-memory`. Spec:
 
 ## App behaviour (run `open MengoDesktop.app` — needs a human at the machine)
 
+- [ ] The whole app is **dark** — window, sidebar, content panes, and the menu-bar dropdown all on the mengo.ai dark palette (`#121315`/`#17181B`/`#1D1F23`), not the system light theme.
+- [ ] The **sidebar header** shows the mango logo + "Mengo" wordmark; the selected sidebar row is highlighted in the brand orange.
+- [ ] Every action button has an **icon** — Pause both / Pause audio / Pause screen / Restart recorder / Reveal recordings / View log — in both the Memory pane and the menu.
+- [ ] The recording dot **pulses** with a soft green halo; the "This session" numbers **roll** when `/health` updates; switching sidebar sections **crossfades**; hovering a stat tile **lifts** it.
+- [ ] Recorder state reads **green = recording**, **orange = paused**, **red = error** — in the hero, the menu-bar glyph, and the pane.
 - [ ] Screen Recording + Microphone permission dialogs appear; grant both (toggle Mengo Desktop on in System Settings if prompted).
 - [ ] Within ~15 s the menu-bar glyph turns **green**. The Memory pane shows **one** status dot (no duplicate `●`), "Recording", the "everything stays on this Mac" subtitle, and a "Since … · …" uptime line.
 - [ ] No "Screen capture: ok / Audio capture: ok" rows anywhere — capture-status text appears *only* if `/health` reports a degraded status (then an amber banner shows).
