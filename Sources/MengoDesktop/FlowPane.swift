@@ -11,6 +11,7 @@ struct FlowPane: View {
         Group {
             switch flow.flowState {
             case .idle:                  idle
+            case .browsingTimeline:      TimelinePickerView(flow: flow)
             case .recording(let s):      recording(s)
             case .synthesizing:          synthesizing
             case .reviewing(let dir):    SkillReviewView(flow: flow, skillDir: dir)
@@ -37,8 +38,9 @@ struct FlowPane: View {
                     .buttonStyle(.borderedProminent).tint(Theme.accent)
                 Text("⌃⌥R").font(Theme.caption).foregroundStyle(Theme.mutedText)
                 Spacer(minLength: 12)
-                Label("Grab last N minutes… — coming soon", systemImage: "clock.arrow.circlepath")
-                    .font(Theme.caption).foregroundStyle(Theme.mutedText).labelStyle(.titleAndIcon)
+                Button { flow.beginBrowsingTimeline() } label: { Label("Grab last N minutes…", systemImage: "clock.arrow.circlepath") }
+                    .buttonStyle(.bordered)
+                Text("⌃⌥G").font(Theme.caption).foregroundStyle(Theme.mutedText)
             }
             if let note = flow.hotkeyNote {
                 Text(note).font(Theme.caption).foregroundStyle(Theme.paused)
@@ -75,7 +77,14 @@ struct FlowPane: View {
                     Text(String(format: "%d:%02d", s / 60, s % 60)).font(.system(.title2, design: .monospaced)).foregroundStyle(Theme.secondaryText)
                 }
             }
-            Text("Narrate your task as you go. Use the floating panel's Stop button (or ⌃⌥R) when you're done.")
+            if let bs = session.bufferRangeStart {
+                let buf = max(0, Int(session.activeRecordingStart.timeIntervalSince(bs)))
+                Text("Buffer: \(buf / 60)m \(buf % 60)s — the synthesizer will reconstruct that earlier window from screen + accessibility.")
+                    .font(Theme.caption).foregroundStyle(Theme.mutedText)
+            }
+            Text(session.bufferRangeStart == nil
+                 ? "Narrate your task as you go. Use the floating panel's Stop button (or ⌃⌥R) when you're done."
+                 : "Narrate forward — and you can also describe what happened earlier. Stop with the floating panel or ⌃⌥R when you're done.")
                 .font(Theme.body).foregroundStyle(Theme.secondaryText).fixedSize(horizontal: false, vertical: true)
             Button { Task { await flow.stop() } } label: { Label("Stop recording", systemImage: "stop.circle") }
                 .buttonStyle(.bordered)

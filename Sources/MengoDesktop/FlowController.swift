@@ -62,6 +62,7 @@ final class FlowController {
     @ObservationIgnored private let libraryStore: FlowLibrary
     @ObservationIgnored private let synthesis: SynthesisRunning
     @ObservationIgnored private let health: FlowPreflightHealth
+    @ObservationIgnored private let moments: MomentIndexing
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let hudShow: (FlowSession, @escaping () -> Void) -> Void
     @ObservationIgnored private let hudHide: () -> Void
@@ -83,6 +84,7 @@ final class FlowController {
          library: FlowLibrary,
          synthesis: SynthesisRunning = SystemSynthesisRunner(),
          health: FlowPreflightHealth,
+         moments: MomentIndexing = NullMomentIndexing(),
          now: @escaping () -> Date = Date.init,
          hudShow: @escaping (FlowSession, @escaping () -> Void) -> Void,
          hudHide: @escaping () -> Void,
@@ -97,6 +99,7 @@ final class FlowController {
         self.libraryStore = library
         self.synthesis = synthesis
         self.health = health
+        self.moments = moments
         self.now = now
         self.hudShow = hudShow
         self.hudHide = hudHide
@@ -123,6 +126,7 @@ final class FlowController {
             recoveryDir: appSupport.appendingPathComponent("recovery", isDirectory: true),
             library: FlowLibrary(),
             health: RecorderPreflightHealth(recorder: recorder),
+            moments: ScreenpipeSearchClient(token: recorder.screenpipeToken),
             hudShow: { session, onStop in hud.show(session: session, onStop: onStop) },
             hudHide: { hud.hide() },
             notify: notify)
@@ -178,6 +182,7 @@ final class FlowController {
     func toggleRecording() async {
         switch flowState {
         case .recording: await stop()
+        case .browsingTimeline: cancelBrowsingTimeline()
         case .idle, .error: await start()
         default: break
         }
@@ -187,6 +192,29 @@ final class FlowController {
         switch flowState { case .idle, .error: break; default: return }
         if let failure = await preflight() { onPreflightFailure(failure); return }
         let session = FlowSession(mode: .proactive, bufferRangeStart: nil, activeRecordingStart: now(), endTime: nil)
+        lastSession = session
+        flowState = .recording(session)
+        hudShow(session) { [weak self] in Task { @MainActor in await self?.stop() } }
+    }
+
+    // MARK: - Mode C: retroactive ("grab last N minutes")
+
+    func beginBrowsingTimeline() { if case .idle = flowState { flowState = .browsingTimeline } }
+    func cancelBrowsingTimeline() { if case .browsingTimeline = flowState { flowState = .idle } }
+
+    /// Recent moments from screenpipe's buffer for the picker (decimated to ≈one per 15 s).
+    func loadMoments(lookbackMinutes: Int) async throws -> [Moment] {
+        let end = now()
+        return try await moments.momentIndex(from: end.addingTimeInterval(-Double(lookbackMinutes) * 60), to: end, limit: 400)
+    }
+
+    /// "Begin from here" in the picker. Preflight, then enter a `.retroactive`
+    /// recording session — `bufferRangeStart` is the picked moment, `activeRecordingStart`
+    /// is now. On a preflight failure, stay in `.browsingTimeline` (the picker stays open).
+    func startRetroactive(bufferStart: Date) async {
+        guard case .browsingTimeline = flowState else { return }
+        if let failure = await preflight() { onPreflightFailure(failure); return }
+        let session = FlowSession(mode: .retroactive, bufferRangeStart: bufferStart, activeRecordingStart: now(), endTime: nil)
         lastSession = session
         flowState = .recording(session)
         hudShow(session) { [weak self] in Task { @MainActor in await self?.stop() } }

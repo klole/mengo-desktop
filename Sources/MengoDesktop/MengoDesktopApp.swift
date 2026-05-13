@@ -2,6 +2,12 @@ import SwiftUI
 import AppKit
 import UserNotifications
 
+extension Notification.Name {
+    /// Posted by the ⌃⌥G global hotkey; observed by the menu-bar label to raise
+    /// the main window onto the Flow tab and open the "grab last N minutes" picker.
+    static let openFlowTimeline = Notification.Name("MengoDesktop.openFlowTimeline")
+}
+
 @main
 @MainActor
 struct MengoDesktopApp: App {
@@ -10,6 +16,7 @@ struct MengoDesktopApp: App {
     @State private var hud: RecordingHUDController
     @State private var hotkeys: HotkeyManager
     @State private var flow: FlowController
+    @Environment(\.openWindow) private var openWindow
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
@@ -36,6 +43,15 @@ struct MengoDesktopApp: App {
             MenuBarContent(appState: appState, recorder: recorder, flow: flow)
         } label: {
             MenuBarLabel(status: recorder.status)
+                .task {
+                    // Lives for the app's lifetime — the menu-bar label is created once at launch.
+                    for await _ in NotificationCenter.default.notifications(named: .openFlowTimeline) {
+                        openWindow(id: "main")
+                        appState.selectedSection = .flow
+                        flow.beginBrowsingTimeline()
+                        NSApp.activate(ignoringOtherApps: true)
+                    }
+                }
         }
         .menuBarExtraStyle(.menu)
     }
@@ -52,9 +68,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.appearance = NSAppearance(named: .darkAqua)
         Task { await AppDelegate.sharedRecorder?.start() }
 
-        // Global hotkey: ⌃⌥R toggles a Flow recording.
+        // Global hotkeys: ⌃⌥R toggles a Flow recording; ⌃⌥G opens the "grab last N minutes" picker.
         AppDelegate.sharedHotkeys?.register(HotkeyManager.recordToggle) {
             Task { @MainActor in await AppDelegate.sharedFlowController?.toggleRecording() }
+        }
+        AppDelegate.sharedHotkeys?.register(HotkeyManager.grabLast) {
+            NotificationCenter.default.post(name: .openFlowTimeline, object: nil)
         }
 
         // Local-notification permission for "skill ready for review" (best-effort).
