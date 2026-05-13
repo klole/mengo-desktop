@@ -1,39 +1,32 @@
 import SwiftUI
 import AppKit
 
-/// Mengo Desktop's design tokens, defined once. The colour/weight values
-/// below are starter values — sampled from the app icon and the system
-/// palette. If a fuller mengo.ai brand kit (typeface, extended palette)
-/// becomes available, change it here.
+/// Mengo Desktop's design tokens — the mengo.ai brand dark palette (the app
+/// forces `.darkAqua`, see `MengoDesktopApp`). Recorder-state colours are
+/// functional, not part of the brand palette: green / brand-orange / red.
 enum Theme {
 
-    // MARK: - Colours
+    // MARK: - Brand palette (mengo.ai dark)
 
-    /// Brand accent — the warm orange of the app icon
-    /// (≈ #FB8420; the icon's field runs ≈#FD9A1E → ≈#F96B1B top-to-bottom).
-    static let accent = Color(red: 251.0 / 255.0, green: 132.0 / 255.0, blue: 32.0 / 255.0)
+    static let windowBackground   = Color(hex: 0x121315)
+    static let paneBackground     = Color(hex: 0x17181B)
+    static let cardBackground     = Color(hex: 0x1D1F23)
+    static let elevatedBackground = Color(hex: 0x22242A)   // hover surface, one notch up
+    static let separator          = Color(hex: 0x2A2D33)
 
-    /// Background behind the whole window / sidebar.
-    static let windowBackground = Color(nsColor: .windowBackgroundColor)
-    /// Background behind a content pane.
-    static let paneBackground = Color(nsColor: .textBackgroundColor)
-    /// Hairline separators.
-    static let separator = Color(nsColor: .separatorColor)
-    /// Primary text.
-    static let primaryText = Color(nsColor: .labelColor)
-    /// De-emphasised / secondary text.
-    static let secondaryText = Color(nsColor: .secondaryLabelColor)
+    static let primaryText   = Color(hex: 0xF3F4F6)
+    static let secondaryText = Color(hex: 0xA6ADB8)
+    static let mutedText     = Color(hex: 0x737A86)
 
-    // MARK: - Status & surfaces
+    static let accent      = Color(hex: 0xFF8A3D)
+    static let accentHover = Color(hex: 0xFF9D5C)
+    static let accentGlow  = Color(hex: 0xFF8A3D).opacity(0.18)
 
-    /// Recorder is healthy and running.
-    static let recording = Color.green
-    /// Recorder is paused (audio, screen, or both).
-    static let paused = Color(red: 0.92, green: 0.62, blue: 0.10)   // a calmer amber than .yellow
-    /// Recorder stopped / errored.
-    static let stopped = Color.red
-    /// Subtle elevated fill for cards/tiles within a pane.
-    static let cardBackground = Color(nsColor: .controlBackgroundColor)
+    // MARK: - Recorder state colours (functional)
+
+    static let recording = Color(hex: 0x3DD56B)   // green — recording
+    static let paused    = accent                  // orange — paused (audio/screen/both)
+    static let stopped   = Color(hex: 0xE5484D)   // red — error
 
     // MARK: - Typography
 
@@ -42,4 +35,15 @@ enum Theme {
     static let headline   = Font.system(.headline, design: .default)
     static let body       = Font.system(.body, design: .default)
     static let caption    = Font.system(.caption, design: .default)
+}
+
+private extension Color {
+    /// Build an opaque sRGB colour from a 0xRRGGBB literal.
+    init(hex: UInt) {
+        self.init(.sRGB,
+                  red:   Double((hex >> 16) & 0xFF) / 255.0,
+                  green: Double((hex >> 8)  & 0xFF) / 255.0,
+                  blue:  Double( hex        & 0xFF) / 255.0,
+                  opacity: 1.0)
+    }
 }
