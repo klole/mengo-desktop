@@ -9,6 +9,8 @@ import SwiftUI
 struct MainWindowView: View {
     let appState: AppState
     let recorder: RecorderController
+    let account: AccountStore
+    let settings: SettingsStore
     let flow: FlowController
 
     var body: some View {
