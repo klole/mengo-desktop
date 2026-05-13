@@ -63,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static weak var sharedRecorder: RecorderController?
     @MainActor static weak var sharedFlowController: FlowController?
     @MainActor static weak var sharedHotkeys: HotkeyManager?
+    @MainActor static weak var sharedAccount: AccountStore?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.appearance = NSAppearance(named: .darkAqua)
