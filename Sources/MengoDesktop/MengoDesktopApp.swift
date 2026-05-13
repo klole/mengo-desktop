@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static weak var sharedRecorder: RecorderController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.appearance = NSAppearance(named: .darkAqua)
         Task { await AppDelegate.sharedRecorder?.start() }
     }
 
