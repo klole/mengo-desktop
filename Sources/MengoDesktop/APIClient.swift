@@ -1,16 +1,43 @@
 import Foundation
 
-/// screenpipe's `/health` response, core fields only. screenpipe may include
-/// more — those are ignored. (Renamed/flattened from V1's `APIClient.HealthStatus`.)
+/// screenpipe's `/health` response — the subset Mengo Memory surfaces. screenpipe
+/// includes more; unknown keys are ignored, and any field a build omits is `nil`.
+/// `lastFrameTimestamp` is kept as a raw string and parsed leniently by the UI so a
+/// malformed value can't fail the whole decode.
 struct ScreenpipeHealth: Decodable, Sendable {
-    let status: String
-    let frameStatus: String
-    let audioStatus: String
+    var status: String
+    var frameStatus: String
+    var audioStatus: String
+    var version: String? = nil
+    var monitors: [String]? = nil
+    var lastFrameTimestamp: String? = nil
+    var pipeline: Pipeline? = nil
+    var audioPipeline: AudioPipeline? = nil
+
+    struct Pipeline: Decodable, Sendable {
+        var uptimeSecs: Double? = nil
+        var framesCaptured: Int? = nil
+        private enum CodingKeys: String, CodingKey {
+            case uptimeSecs = "uptime_secs"
+            case framesCaptured = "frames_captured"
+        }
+    }
+
+    struct AudioPipeline: Decodable, Sendable {
+        var totalWords: Int? = nil
+        var audioDevices: [String]? = nil
+        private enum CodingKeys: String, CodingKey {
+            case totalWords = "total_words"
+            case audioDevices = "audio_devices"
+        }
+    }
 
     private enum CodingKeys: String, CodingKey {
-        case status
+        case status, version, monitors, pipeline
         case frameStatus = "frame_status"
         case audioStatus = "audio_status"
+        case lastFrameTimestamp = "last_frame_timestamp"
+        case audioPipeline = "audio_pipeline"
     }
 }
 
