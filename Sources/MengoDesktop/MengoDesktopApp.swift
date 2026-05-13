@@ -12,6 +12,8 @@ extension Notification.Name {
 @MainActor
 struct MengoDesktopApp: App {
     @State private var appState = AppState()
+    @State private var account: AccountStore
+    @State private var settings: SettingsStore
     @State private var recorder: RecorderController
     @State private var hud: RecordingHUDController
     @State private var hotkeys: HotkeyManager
@@ -21,10 +23,14 @@ struct MengoDesktopApp: App {
 
     init() {
         Log.bootstrap()
+        let acct = AccountStore()
+        let st = SettingsStore()
         let rec = RecorderController()
         let h = RecordingHUDController()
         let hk = HotkeyManager()
-        let fl = FlowController.live(recorder: rec, hud: h, notify: { AppDelegate.postFlowNotification($0) })
+        let fl = FlowController.live(recorder: rec, hud: h, account: acct, settings: st, notify: { AppDelegate.postFlowNotification($0) })
+        _account = State(initialValue: acct)
+        _settings = State(initialValue: st)
         _recorder = State(initialValue: rec)
         _hud = State(initialValue: h)
         _hotkeys = State(initialValue: hk)
@@ -34,13 +40,31 @@ struct MengoDesktopApp: App {
 
     var body: some Scene {
         Window("Mengo Desktop", id: "main") {
-            MainWindowView(appState: appState, recorder: recorder, flow: flow)
+            Group {
+                if case .signedIn = account.state {
+                    MainWindowView(appState: appState, recorder: recorder, account: account, settings: settings, flow: flow)
+                } else {
+                    SignInView(account: account)
+                }
+            }
+            .onOpenURL { url in
+                guard let link = MengoURL.parse(url) else { Log.line("ignored deep link: \(url)"); return }
+                Task { @MainActor in
+                    switch link {
+                    case .auth(let token):
+                        await account.handleAuthDeepLink(token: token)
+                        AppDelegate.startRecorderIfWanted()
+                    case .refresh:
+                        await account.refresh()
+                    }
+                }
+            }
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 880, height: 600)
 
         MenuBarExtra {
-            MenuBarContent(appState: appState, recorder: recorder, flow: flow)
+            MenuBarContent(appState: appState, recorder: recorder, account: account, flow: flow)
         } label: {
             MenuBarLabel(status: recorder.status)
                 .task {
@@ -63,10 +87,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static weak var sharedRecorder: RecorderController?
     @MainActor static weak var sharedFlowController: FlowController?
     @MainActor static weak var sharedHotkeys: HotkeyManager?
+    @MainActor static weak var sharedAccount: AccountStore?
+    @MainActor static weak var sharedSettings: SettingsStore?
+
+    /// Starts the recorder iff the user is signed in and has `startRecordingOnLaunch`
+    /// enabled. Safe to call multiple times — the recorder is idempotent.
+    @MainActor static func startRecorderIfWanted() {
+        guard let acct = sharedAccount, case .signedIn = acct.state else { return }
+        guard sharedSettings?.startRecordingOnLaunch != false else { return }
+        Task { await sharedRecorder?.start() }
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.appearance = NSAppearance(named: .darkAqua)
-        Task { await AppDelegate.sharedRecorder?.start() }
+        AppDelegate.startRecorderIfWanted()
 
         // Global hotkeys: ⌃⌥R toggles a Flow recording; ⌃⌥G opens the "grab last N minutes" picker.
         AppDelegate.sharedHotkeys?.register(HotkeyManager.recordToggle) {
