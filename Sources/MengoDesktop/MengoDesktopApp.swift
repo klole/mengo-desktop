@@ -28,7 +28,7 @@ struct MengoDesktopApp: App {
         let rec = RecorderController()
         let h = RecordingHUDController()
         let hk = HotkeyManager()
-        let fl = FlowController.live(recorder: rec, hud: h, notify: { AppDelegate.postFlowNotification($0) })
+        let fl = FlowController.live(recorder: rec, hud: h, account: acct, settings: st, notify: { AppDelegate.postFlowNotification($0) })
         _account = State(initialValue: acct)
         _settings = State(initialValue: st)
         _recorder = State(initialValue: rec)
