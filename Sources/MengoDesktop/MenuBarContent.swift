@@ -16,6 +16,20 @@ struct MenuBarContent: View {
         Text("Mengo").font(.headline)
         Divider()
 
+        if case .signedIn = account.state {
+            signedInBody
+        } else {
+            Button("Sign in to Mengo Desktop…") {
+                openWindow(id: "main")
+                NSApp.activate(ignoringOtherApps: true)
+            }
+            Divider()
+            Button("Quit Mengo Desktop") { NSApplication.shared.terminate(nil) }
+                .keyboardShortcut("q")
+        }
+    }
+
+    @ViewBuilder private var signedInBody: some View {
         // MARK: Memory
         Text("Memory").font(.caption).foregroundStyle(.secondary)
         bothItem
@@ -57,6 +71,11 @@ struct MenuBarContent: View {
         Divider()
         Button("Library") { reveal(.library) }
         Button(menuTitle(for: .studio)) { reveal(.studio) }
+        if !account.isPro {
+            Button("Upgrade to Mengo Pro…") {
+                Task { NSWorkspace.shared.open(await account.webURL(path: "/upgrade")) }
+            }
+        }
         Button("Settings…") { reveal(.settings) }
 
         Divider()
