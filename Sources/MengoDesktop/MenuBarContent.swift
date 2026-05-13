@@ -19,10 +19,10 @@ struct MenuBarContent: View {
         audioItem
         screenItem
         if case .error = recorder.status {
-            Button("Restart recorder") { Task { await recorder.restartAfterCrash() } }
+            Button { Task { await recorder.restartAfterCrash() } } label: { Label("Restart recorder", systemImage: "arrow.clockwise") }
         }
-        Button("Reveal recordings") { NSWorkspace.shared.open(recorder.dataFolderURL) }
-        Button("View log") { NSWorkspace.shared.open(recorder.recorderLogURL) }
+        Button { NSWorkspace.shared.open(recorder.dataFolderURL) } label: { Label("Reveal recordings", systemImage: "folder") }
+        Button { NSWorkspace.shared.open(recorder.recorderLogURL) } label: { Label("View log", systemImage: "doc.text") }
 
         // MARK: Flow (Phase 3)
         Text("Flow").font(.caption).foregroundStyle(.secondary)
@@ -42,20 +42,20 @@ struct MenuBarContent: View {
     @ViewBuilder private var bothItem: some View {
         switch recorder.status {
         case .bothPaused:
-            Button("Resume both") { Task { await recorder.resumeAll() } }
+            Button { Task { await recorder.resumeAll() } } label: { Label("Resume both", systemImage: "play.circle.fill") }
         case .recording, .audioPaused, .screenPaused:
-            Button("Pause both") { Task { await recorder.pauseAll() } }
+            Button { Task { await recorder.pauseAll() } } label: { Label("Pause both", systemImage: "pause.circle.fill") }
         case .starting, .idle, .error:
-            Button("Pause both") { }.disabled(true)
+            Button { } label: { Label("Pause both", systemImage: "pause.circle.fill") }.disabled(true)
         }
     }
 
     @ViewBuilder private var audioItem: some View {
         switch recorder.status {
         case .audioPaused, .bothPaused:
-            Button("Resume audio") { Task { await recorder.resumeAudio() } }
+            Button { Task { await recorder.resumeAudio() } } label: { Label("Resume audio", systemImage: "mic") }
         default:
-            Button("Pause audio") { Task { await recorder.pauseAudio() } }
+            Button { Task { await recorder.pauseAudio() } } label: { Label("Pause audio", systemImage: "mic.slash") }
                 .disabled(!recorder.status.isRecording)
         }
     }
@@ -63,9 +63,9 @@ struct MenuBarContent: View {
     @ViewBuilder private var screenItem: some View {
         switch recorder.status {
         case .screenPaused, .bothPaused:
-            Button("Resume screen") { Task { await recorder.resumeScreen() } }
+            Button { Task { await recorder.resumeScreen() } } label: { Label("Resume screen", systemImage: "display") }
         default:
-            Button("Pause screen") { Task { await recorder.pauseScreen() } }
+            Button { Task { await recorder.pauseScreen() } } label: { Label("Pause screen", systemImage: "display.slash") }
                 .disabled(!recorder.status.isRecording)
         }
     }

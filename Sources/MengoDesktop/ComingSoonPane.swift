@@ -8,9 +8,12 @@ struct ComingSoonPane: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: section.systemImage)
-                .font(.system(size: 56))
-                .foregroundStyle(Theme.accent)
+            ZStack {
+                Circle().fill(Theme.accentGlow).frame(width: 110, height: 110).blur(radius: 14)
+                Image(systemName: section.systemImage)
+                    .font(.system(size: 56))
+                    .foregroundStyle(Theme.accent)
+            }
 
             Text(section.displayName)
                 .font(Theme.title)
@@ -22,12 +25,15 @@ struct ComingSoonPane: View {
 
             Text(section.comingSoonBlurb)
                 .font(Theme.body)
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(Theme.mutedText)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 380)
         }
         .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.paneBackground)
+        .background(
+            LinearGradient(colors: [Theme.paneBackground, Theme.windowBackground],
+                           startPoint: .top, endPoint: .bottom)
+        )
     }
 }
