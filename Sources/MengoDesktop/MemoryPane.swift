@@ -5,6 +5,7 @@ import SwiftUI
 struct MemoryPane: View {
     let recorder: RecorderController
     @State private var appeared = false
+    @State private var showSources = false
 
     var body: some View {
         ScrollView {
@@ -26,6 +27,7 @@ struct MemoryPane: View {
             LinearGradient(colors: [Theme.paneBackground, Theme.windowBackground],
                            startPoint: .top, endPoint: .bottom)
         )
+        .sheet(isPresented: $showSources) { RecordingSourcesView(recorder: recorder) }
         .animation(.spring(duration: 0.35), value: degradedMessage)
         .task {
             withAnimation(.easeOut(duration: 0.3)) { appeared = true }
@@ -151,10 +153,15 @@ struct MemoryPane: View {
                     Label(bothTitle, systemImage: recorder.status == .bothPaused ? "play.circle.fill" : "pause.circle.fill")
                 }
                 .buttonStyle(.borderedProminent).tint(Theme.accent).disabled(disableControls)
-                Button { Task { await audioAction() } } label: {
-                    Label(audioTitle, systemImage: audioPausedNow ? "mic" : "mic.slash")
+                if recorder.runningAudioDisabled {
+                    Label("Microphone off — no audio sources selected", systemImage: "mic.slash")
+                        .font(Theme.caption).foregroundStyle(Theme.mutedText).labelStyle(.titleAndIcon)
+                } else {
+                    Button { Task { await audioAction() } } label: {
+                        Label(audioTitle, systemImage: audioPausedNow ? "mic" : "mic.slash")
+                    }
+                    .buttonStyle(.bordered).disabled(disableControls)
                 }
-                .buttonStyle(.bordered).disabled(disableControls)
                 Button { Task { await screenAction() } } label: {
                     Label(screenTitle, systemImage: screenPausedNow ? "rectangle" : "rectangle.slash")
                 }
@@ -162,6 +169,10 @@ struct MemoryPane: View {
                 Spacer(minLength: 12)
                 Button { NSWorkspace.shared.open(recorder.dataFolderURL) } label: {
                     Label("Reveal recordings", systemImage: "folder")
+                }
+                .buttonStyle(.plain).foregroundStyle(Theme.accent)
+                Button { showSources = true } label: {
+                    Label("Configure sources…", systemImage: "slider.horizontal.3")
                 }
                 .buttonStyle(.plain).foregroundStyle(Theme.accent)
             }
@@ -206,8 +217,14 @@ struct MemoryPane: View {
 
     private var framesCaptured: Int? { recorder.lastHealth?.pipeline?.framesCaptured }
     private var totalWords: Int? { recorder.lastHealth?.audioPipeline?.totalWords }
-    private var displayCount: Int? { recorder.lastHealth?.monitors?.count }
-    private var micCount: Int? { recorder.lastHealth?.audioPipeline?.audioDevices?.filter { $0.lowercased().contains("input") }.count }
+    private var displayCount: Int? {
+        recorder.runningMonitorIDs?.count ?? recorder.lastHealth?.monitors?.count
+    }
+    private var micCount: Int? {
+        if recorder.runningAudioDisabled { return 0 }
+        if let names = recorder.runningAudioDeviceNames { return names.count }
+        return recorder.lastHealth?.audioPipeline?.audioDevices?.filter { $0.lowercased().contains("input") }.count
+    }
 
     private var lastCaptureText: String? {
         guard let s = recorder.lastHealth?.lastFrameTimestamp, let d = MemoryFormatting.parseTimestamp(s) else { return nil }
