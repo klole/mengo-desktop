@@ -16,7 +16,7 @@ struct MemoryDashboardPane: View {
     let store: MemoryDashboardStore
 
     @State private var showAdvancedSources = false
-    @State private var showScheduleStub = false
+    @State private var showSchedule = false
     @State private var listSheet: MemoryListPage.Kind?
 
     private let narrowBreakpoint: CGFloat = 1100
@@ -29,7 +29,7 @@ struct MemoryDashboardPane: View {
                     MemoryHero(
                         recorder: recorder,
                         settings: settings,
-                        onSchedule: { showScheduleStub = true },
+                        onSchedule: { showSchedule = true },
                         onShowAdvancedSources: { showAdvancedSources = true },
                         onShowSettings: { appState.selectedSection = .settings }
                     )
@@ -73,10 +73,8 @@ struct MemoryDashboardPane: View {
         .sheet(item: $listSheet) { kind in
             MemoryListPage(kind: kind, store: store, onClose: { listSheet = nil })
         }
-        .alert("Schedule Recording", isPresented: $showScheduleStub) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Recurring + one-off schedules land in Part D.")
+        .sheet(isPresented: $showSchedule) {
+            ScheduleRecordingSheet(settings: settings, onClose: { showSchedule = false })
         }
         .task {
             await store.task()

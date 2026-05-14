@@ -258,4 +258,67 @@ final class RecorderControllerTests: XCTestCase {
         XCTAssertTrue(proc.lastExtraArguments.contains("2.0"),
                       "allChanges should set --fps 2.0; got \(proc.lastExtraArguments)")
     }
+
+    // MARK: - applySchedule (D4)
+
+    func test_applySchedule_nilSchedule_isNoOp() async {
+        let c = makeController()
+        await c.applySchedule(nil)
+        XCTAssertEqual(c.status, .idle)
+    }
+
+    func test_applySchedule_emptyRules_isNoOp() async {
+        let c = makeController()
+        await c.start()
+        await eventually { c.status == .recording }
+        await c.applySchedule(RecordingSchedule.empty)
+        XCTAssertEqual(c.status, .recording, "empty schedule shouldn't change state")
+    }
+
+    func test_applySchedule_outsideRule_pausesIfRecording() async {
+        let c = makeController()
+        await c.start()
+        await eventually { c.status == .recording }
+
+        // Rule active 09:00..10:00 every Monday — evaluate at a Wednesday.
+        let wed = makeDate(weekday: .wed, hour: 14, minute: 30)
+        let rule: RecordingScheduleRule = .recurring(id: UUID(), days: [.mon], start: ClockTime(hour: 9, minute: 0), end: ClockTime(hour: 10, minute: 0))
+        let schedule = RecordingSchedule(rules: [rule])
+
+        await c.applySchedule(schedule, now: wed)
+        await eventually { c.status == .bothPaused }
+        XCTAssertEqual(c.status, .bothPaused)
+    }
+
+    func test_applySchedule_withinRule_resumesIfPaused() async {
+        let c = makeController()
+        await c.start()
+        await eventually { c.status == .recording }
+        await c.pauseAll()
+        await eventually { c.status == .bothPaused }
+
+        let mon = makeDate(weekday: .mon, hour: 9, minute: 30)
+        let rule: RecordingScheduleRule = .recurring(id: UUID(), days: [.mon], start: ClockTime(hour: 9, minute: 0), end: ClockTime(hour: 10, minute: 0))
+        let schedule = RecordingSchedule(rules: [rule])
+
+        await c.applySchedule(schedule, now: mon)
+        await eventually { c.status == .recording }
+        XCTAssertEqual(c.status, .recording)
+    }
+
+    // Builds a fixed-weekday date in the current calendar — robust across runs.
+    private func makeDate(weekday: Weekday, hour: Int, minute: Int) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        var comps = DateComponents()
+        comps.weekday = weekday.rawValue
+        comps.hour = hour
+        comps.minute = minute
+        // Anchor to the current year/week so the test is reproducible.
+        let now = Date()
+        let nowComps = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)
+        comps.yearForWeekOfYear = nowComps.yearForWeekOfYear
+        comps.weekOfYear = nowComps.weekOfYear
+        return calendar.date(from: comps) ?? now
+    }
 }

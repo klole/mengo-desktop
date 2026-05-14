@@ -103,6 +103,83 @@ enum CaptureMode: String, CaseIterable, Sendable, Codable {
     }
 }
 
+// MARK: - Recording schedule
+
+/// Day-of-week used by `RecordingScheduleRule.recurring`. Aligned with
+/// `Calendar`'s 1-based weekday component (1 = Sunday).
+enum Weekday: Int, Codable, CaseIterable, Sendable {
+    case sun = 1, mon, tue, wed, thu, fri, sat
+
+    var shortName: String {
+        switch self {
+        case .sun: return "Sun"; case .mon: return "Mon"; case .tue: return "Tue"
+        case .wed: return "Wed"; case .thu: return "Thu"; case .fri: return "Fri"
+        case .sat: return "Sat"
+        }
+    }
+}
+
+/// Time-of-day with minute resolution. `ClockTime(hour: 9, minute: 0)` is 9 am
+/// in the user's current time zone — schedules are evaluated against the
+/// system calendar at runtime.
+struct ClockTime: Equatable, Codable, Sendable {
+    let hour: Int    // 0..23
+    let minute: Int  // 0..59
+
+    var minutesSinceMidnight: Int { hour * 60 + minute }
+
+    func formatted() -> String {
+        String(format: "%02d:%02d", hour, minute)
+    }
+}
+
+/// One rule in a `RecordingSchedule`. Recurring rules fire on the listed
+/// weekdays, between start and end (inclusive of start, exclusive of end).
+/// One-off rules fire once over an absolute date range.
+enum RecordingScheduleRule: Equatable, Codable, Sendable, Identifiable {
+    case recurring(id: UUID, days: Set<Weekday>, start: ClockTime, end: ClockTime)
+    case oneOff(id: UUID, start: Date, end: Date)
+
+    var id: UUID {
+        switch self {
+        case .recurring(let id, _, _, _): return id
+        case .oneOff(let id, _, _):       return id
+        }
+    }
+
+    /// True when `date` falls inside the rule's window.
+    func contains(_ date: Date, calendar: Calendar = .current) -> Bool {
+        switch self {
+        case .recurring(_, let days, let start, let end):
+            let comps = calendar.dateComponents([.weekday, .hour, .minute], from: date)
+            guard let wd = comps.weekday, let h = comps.hour, let m = comps.minute,
+                  let weekday = Weekday(rawValue: wd) else { return false }
+            guard days.contains(weekday) else { return false }
+            let now = h * 60 + m
+            let s = start.minutesSinceMidnight
+            let e = end.minutesSinceMidnight
+            if s <= e { return now >= s && now < e }
+            // Wraps midnight (e.g. 22:00 → 06:00).
+            return now >= s || now < e
+        case .oneOff(_, let start, let end):
+            return date >= start && date < end
+        }
+    }
+}
+
+/// The user's saved recording schedule. `nil` (or empty `rules`) means the
+/// recorder is governed manually; otherwise the controller follows the rules
+/// on each health-poll tick.
+struct RecordingSchedule: Equatable, Codable, Sendable {
+    var rules: [RecordingScheduleRule]
+
+    func isActive(at date: Date, calendar: Calendar = .current) -> Bool {
+        rules.contains { $0.contains(date, calendar: calendar) }
+    }
+
+    static let empty = RecordingSchedule(rules: [])
+}
+
 /// Selector for `MemoryDashboardStore.topAppsWindow`. Stored in `SettingsStore`
 /// so the last choice survives launches.
 enum TopAppsWindow: String, CaseIterable, Sendable, Codable {

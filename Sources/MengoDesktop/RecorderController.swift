@@ -39,6 +39,7 @@ final class RecorderController {
     @ObservationIgnored private var screenPaused = false
 
     @ObservationIgnored private let captureModeProvider: @MainActor () -> CaptureMode
+    @ObservationIgnored private let scheduleProvider: @MainActor () -> RecordingSchedule?
 
     init(
         processFactory: (String) -> RecorderProcessControlling = { RecorderProcess(token: $0) },
@@ -48,7 +49,8 @@ final class RecorderController {
         pollInterval: Duration = .seconds(5),
         sourcesStore: RecordingSourcesStore = RecordingSourcesStore(),
         sourceCatalog: RecordingSourceCatalog = RecorderCLICatalog(),
-        captureModeProvider: @escaping @MainActor () -> CaptureMode = { .smartCapture }
+        captureModeProvider: @escaping @MainActor () -> CaptureMode = { .smartCapture },
+        scheduleProvider: @escaping @MainActor () -> RecordingSchedule? = { nil }
     ) {
         let token = RecorderProcess.newToken()
         self.recorderToken = token
@@ -60,6 +62,7 @@ final class RecorderController {
         self.sourcesStore = sourcesStore
         self.sourceCatalog = sourceCatalog
         self.captureModeProvider = captureModeProvider
+        self.scheduleProvider = scheduleProvider
         AppDelegate.sharedRecorder = self   // V1's bridge for the AppDelegate hooks
     }
 
@@ -166,6 +169,22 @@ final class RecorderController {
         } catch { status = .error("restart failed: \(error)") }
     }
 
+    /// Enforce the user's saved recording schedule. Called from the
+    /// health-poll task each tick. No-op for `nil`. The state machine:
+    ///   - active rule + currently `.bothPaused` → resume.
+    ///   - no active rule + currently recording  → pause.
+    /// Manual `.idle` / `.starting` / `.error` states are not touched —
+    /// schedules don't auto-start a stopped recorder.
+    func applySchedule(_ schedule: RecordingSchedule?, now: Date = Date()) async {
+        guard let schedule, !schedule.rules.isEmpty else { return }
+        let active = schedule.isActive(at: now)
+        if active && status == .bothPaused {
+            await resumeAll()
+        } else if !active && status.isRecording {
+            await pauseAll()
+        }
+    }
+
     /// The persisted source selection has changed (the caller already wrote
     /// `RecordingSourcesStore`). Restart the recorder so the new `--monitor-id` /
     /// `--audio-device` / `--disable-audio` flags take effect.
@@ -268,6 +287,11 @@ final class RecorderController {
                         guard let self else { return }
                         self.lastHealth = health
                         if case .starting = self.status { self.recompute() }
+                    }
+                    // Enforce the user's recording schedule (if any) each tick.
+                    if let self {
+                        let schedule = await MainActor.run { self.scheduleProvider() }
+                        await self.applySchedule(schedule)
                     }
                 } catch {
                     failures += 1

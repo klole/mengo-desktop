@@ -40,6 +40,16 @@ final class SettingsStore {
     var aiInsightsEnabled: Bool {
         didSet { defaults.set(aiInsightsEnabled, forKey: Keys.aiInsights) }
     }
+    var recordingSchedule: RecordingSchedule? {
+        didSet {
+            if let recordingSchedule, !recordingSchedule.rules.isEmpty,
+               let data = try? JSONEncoder.iso8601.encode(recordingSchedule) {
+                defaults.set(data, forKey: Keys.recordingSchedule)
+            } else {
+                defaults.removeObject(forKey: Keys.recordingSchedule)
+            }
+        }
+    }
 
     private enum Keys {
         static let runtime = "synthesisRuntime"
@@ -47,6 +57,7 @@ final class SettingsStore {
         static let topAppsWindow = "topAppsWindow"
         static let captureMode = "captureMode"
         static let aiInsights = "aiInsightsEnabled"
+        static let recordingSchedule = "recordingSchedule"
     }
 
     init(defaults: UserDefaults = .standard, loginItem: LoginItemControlling = SMLoginItem()) {
@@ -59,6 +70,12 @@ final class SettingsStore {
         // aiInsightsEnabled defaults to false — explicitly opt-in, since it
         // costs the user's CLI tokens.
         self.aiInsightsEnabled = defaults.object(forKey: Keys.aiInsights) as? Bool ?? false
+        if let data = defaults.data(forKey: Keys.recordingSchedule),
+           let decoded = try? JSONDecoder.iso8601.decode(RecordingSchedule.self, from: data) {
+            self.recordingSchedule = decoded
+        } else {
+            self.recordingSchedule = nil
+        }
         AppDelegate.sharedSettings = self
     }
 
