@@ -20,6 +20,30 @@ struct RawAppCount: Equatable, Sendable {
     let frameCount: Int
 }
 
+/// Display-ready app usage row for the Top Applications card.
+struct AppUsageRow: Equatable, Sendable, Identifiable {
+    let appName: String       // raw name from the DB — the stable id
+    let displayName: String   // humanized
+    let iconName: String      // SF Symbol
+    let frameCount: Int
+    let sharePercent: Int     // 0...100, rounded
+    var id: String { appName }
+}
+
+/// Display-ready row for the Recent Sessions card. A "session" is a
+/// contiguous time-cluster of frames (gap < 5 min); within the cluster,
+/// one app dominates and labels the session.
+struct SessionRow: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let title: String         // "Chrome session" / "VS Code session"
+    let subtitle: String?     // dominant window_name OR "with <secondApp>"
+    let startedAt: Date
+    let endedAt: Date
+    let frameCount: Int
+    let appIcons: [String]    // top 3 SF Symbol names by frame count
+    var duration: TimeInterval { endedAt.timeIntervalSince(startedAt) }
+}
+
 /// Live-feed event. IDs partition by kind so screenshots and transcriptions
 /// don't collide; the cursor in `MemoryDB.recentActivity` tracks them
 /// separately.
