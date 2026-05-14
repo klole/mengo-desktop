@@ -98,4 +98,76 @@ final class InsightsEngineTests: XCTestCase {
     func test_emptyInputReturnsEmpty() {
         XCTAssertEqual(InsightsEngine.candidates(from: []), [])
     }
+
+    // MARK: - Pass 2 polish
+
+    func test_polish_disabled_returnsCandidatesUnchanged() async {
+        let original = sampleInsights()
+        let polisher: InsightsEngine.Polisher = { _ in
+            XCTFail("polisher should not be invoked when disabled")
+            return []
+        }
+        let result = await InsightsEngine.polish(original, enabled: false, polisher: polisher)
+        XCTAssertEqual(result, original)
+    }
+
+    func test_polish_enabled_appliesPolishedStrings() async {
+        let original = sampleInsights()
+        let polished = original.map { InsightsEngine.PolishedText(id: $0.id, title: "POLISHED \($0.kind.rawValue)", body: "polished body") }
+        let polisher: InsightsEngine.Polisher = { _ in polished }
+        let result = await InsightsEngine.polish(original, enabled: true, polisher: polisher)
+        XCTAssertEqual(result.count, original.count)
+        for (input, output) in zip(original, result) {
+            XCTAssertEqual(output.id, input.id)
+            XCTAssertEqual(output.kind, input.kind)
+            XCTAssertEqual(output.cta, input.cta)
+            XCTAssertTrue(output.title.hasPrefix("POLISHED "))
+            XCTAssertEqual(output.body, "polished body")
+        }
+    }
+
+    func test_polish_runtimeFailure_fallsBackToTemplated() async {
+        let original = sampleInsights()
+        let polisher: InsightsEngine.Polisher = { _ in throw StubError.boom }
+        let result = await InsightsEngine.polish(original, enabled: true, polisher: polisher)
+        XCTAssertEqual(result, original)
+    }
+
+    // MARK: - Cache
+
+    func test_cache_writeReadRoundTrip() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("insights-test-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let original = sampleInsights()
+        InsightsEngine.saveCache(original, runtimeID: "claudeCode", to: url, now: Date())
+        let loaded = InsightsEngine.loadCache(from: url, maxAge: 60, now: Date())
+        XCTAssertEqual(loaded, original)
+    }
+
+    func test_cache_expiredCacheReturnsNil() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("insights-test-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let writeTime = Date(timeIntervalSince1970: 1_000_000)
+        InsightsEngine.saveCache(sampleInsights(), runtimeID: "claudeCode", to: url, now: writeTime)
+        // Read time 700s later; maxAge = 600s → expired.
+        let readTime = writeTime.addingTimeInterval(700)
+        let loaded = InsightsEngine.loadCache(from: url, maxAge: 600, now: readTime)
+        XCTAssertNil(loaded)
+    }
+
+    // MARK: -
+
+    private func sampleInsights() -> [Insight] {
+        [
+            Insight(id: UUID(), kind: .workflowDetected,      title: "WD",  body: "wd body", cta: .createFlow(seed: "x"),       signal: 5),
+            Insight(id: UUID(), kind: .automationOpportunity, title: "AO",  body: "ao body", cta: .createSkill(seed: "y"),      signal: 4),
+            Insight(id: UUID(), kind: .focusPattern,          title: "FP",  body: "fp body", cta: .viewMemory(startedAt: now, endedAt: now), signal: 3),
+        ]
+    }
 }
+
+private enum StubError: Error { case boom }

@@ -14,6 +14,82 @@ import Foundation
 /// preserves the `kind` and `cta` from Pass 1 — only the strings change.
 enum InsightsEngine {
 
+    // MARK: - Pass 2 (opt-in LLM polish)
+
+    /// Replacement strings handed back by the polisher. The engine merges
+    /// these onto the heuristic candidates by `id` — `kind` and `cta` never
+    /// change in the polish step.
+    struct PolishedText: Equatable, Sendable, Codable {
+        let id: UUID
+        let title: String
+        let body: String
+    }
+
+    /// Stable closure interface: take the candidates, return polished strings.
+    /// In production the closure shells out to the user's Claude Code / Codex
+    /// CLI; in tests it's a stub that returns canned data (or throws).
+    typealias Polisher = @Sendable ([Insight]) async throws -> [PolishedText]
+
+    /// Optionally rewrites `title`/`body` for each candidate using the
+    /// user-supplied polisher. When `enabled` is false the candidates pass
+    /// through unchanged; when the polisher throws, the candidates also pass
+    /// through unchanged (the dashboard remains useful even with a flaky CLI).
+    static func polish(
+        _ candidates: [Insight],
+        enabled: Bool,
+        polisher: Polisher
+    ) async -> [Insight] {
+        guard enabled, !candidates.isEmpty else { return candidates }
+        let polished: [PolishedText]
+        do { polished = try await polisher(candidates) }
+        catch { return candidates }
+
+        let byID = Dictionary(uniqueKeysWithValues: polished.map { ($0.id, $0) })
+        return candidates.map { c in
+            guard let p = byID[c.id] else { return c }
+            var copy = c
+            copy.title = p.title
+            copy.body  = p.body
+            return copy
+        }
+    }
+
+    // MARK: - Disk cache
+
+    struct Cache: Codable, Equatable, Sendable {
+        let generatedAt: Date
+        let runtimeID: String
+        let insights: [Insight]
+    }
+
+    /// Default cache location — App Support, per the spec.
+    static var defaultCacheURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("MengoDesktop", isDirectory: true)
+            .appendingPathComponent("insights-cache.json")
+    }
+
+    /// Returns the cached insights if the file exists and was written within
+    /// `maxAge` seconds. Otherwise returns nil (no error — refresh fall-through).
+    static func loadCache(from url: URL = defaultCacheURL, maxAge: TimeInterval = 600, now: Date = Date()) -> [Insight]? {
+        guard let data = try? Data(contentsOf: url),
+              let cache = try? JSONDecoder.iso8601.decode(Cache.self, from: data),
+              now.timeIntervalSince(cache.generatedAt) < maxAge
+        else { return nil }
+        return cache.insights
+    }
+
+    /// Persists the (polished) insights so the next launch / pane navigation
+    /// doesn't re-trigger the LLM call inside the 10-min window.
+    static func saveCache(_ insights: [Insight], runtimeID: String, to url: URL = defaultCacheURL, now: Date = Date()) {
+        let cache = Cache(generatedAt: now, runtimeID: runtimeID, insights: insights)
+        guard let data = try? JSONEncoder.iso8601.encode(cache) else { return }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: .atomic)
+    }
+
+    // MARK: - Pass 1 (heuristic — always on, no LLM)
+
     /// Top 4 candidates by signal score, surfaced for the dashboard carousel.
     static func candidates(from frames: [FrameRow], referenceTime: Date = Date()) -> [Insight] {
         guard !frames.isEmpty else { return [] }

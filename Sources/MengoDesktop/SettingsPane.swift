@@ -137,6 +137,13 @@ struct SettingsPane: View {
                    isOn: Binding(get: { settings.startRecordingOnLaunch },
                                  set: { settings.startRecordingOnLaunch = $0 }))
                 .toggleStyle(.switch).tint(Theme.accent)
+            Toggle("Generate insight summaries with AI",
+                   isOn: Binding(get: { settings.aiInsightsEnabled },
+                                 set: { settings.aiInsightsEnabled = $0 }))
+                .toggleStyle(.switch).tint(Theme.accent)
+            Text("Uses your Claude Code / Codex CLI to polish the Memory Dashboard's Mengo Insights cards. Runs at most every 10 minutes; cached to disk between refreshes.")
+                .font(Theme.caption).foregroundStyle(Theme.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

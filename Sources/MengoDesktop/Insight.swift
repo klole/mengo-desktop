@@ -4,7 +4,7 @@ import Foundation
 /// carousel. Produced by `InsightsEngine` — either from heuristics (Pass 1)
 /// or from an opt-in LLM polish (Pass 2). The same value type is used in
 /// both paths; only the `title`/`body` change.
-struct Insight: Identifiable, Equatable, Sendable {
+struct Insight: Identifiable, Equatable, Sendable, Codable {
     let id: UUID
     let kind: InsightKind
     var title: String
@@ -40,7 +40,7 @@ enum InsightKind: String, Sendable, Codable, CaseIterable {
 }
 
 /// Callback target for an insight card's primary button.
-enum InsightCTA: Equatable, Sendable {
+enum InsightCTA: Equatable, Sendable, Codable {
     case createSkill(seed: String)
     case createFlow(seed: String)
     case viewMemory(startedAt: Date, endedAt: Date)

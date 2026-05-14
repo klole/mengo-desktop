@@ -37,12 +37,16 @@ final class SettingsStore {
     var captureMode: CaptureMode {
         didSet { defaults.set(captureMode.rawValue, forKey: Keys.captureMode) }
     }
+    var aiInsightsEnabled: Bool {
+        didSet { defaults.set(aiInsightsEnabled, forKey: Keys.aiInsights) }
+    }
 
     private enum Keys {
         static let runtime = "synthesisRuntime"
         static let startRec = "startRecordingOnLaunch"
         static let topAppsWindow = "topAppsWindow"
         static let captureMode = "captureMode"
+        static let aiInsights = "aiInsightsEnabled"
     }
 
     init(defaults: UserDefaults = .standard, loginItem: LoginItemControlling = SMLoginItem()) {
@@ -52,6 +56,9 @@ final class SettingsStore {
         self.startRecordingOnLaunch = defaults.object(forKey: Keys.startRec) as? Bool ?? true
         self.topAppsWindow = (defaults.string(forKey: Keys.topAppsWindow)).flatMap(TopAppsWindow.init(rawValue:)) ?? .today
         self.captureMode = (defaults.string(forKey: Keys.captureMode)).flatMap(CaptureMode.init(rawValue:)) ?? .smartCapture
+        // aiInsightsEnabled defaults to false — explicitly opt-in, since it
+        // costs the user's CLI tokens.
+        self.aiInsightsEnabled = defaults.object(forKey: Keys.aiInsights) as? Bool ?? false
         AppDelegate.sharedSettings = self
     }
 

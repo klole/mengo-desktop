@@ -35,13 +35,28 @@ final class MemoryDashboardStore {
     @ObservationIgnored private let db: MemoryDashboardSource
     @ObservationIgnored private let settings: SettingsStore
     @ObservationIgnored private let activityStream: ActivityFeedStream
+    @ObservationIgnored private let insightsPolisher: InsightsEngine.Polisher
 
-    init(db: MemoryDashboardSource, settings: SettingsStore, activityStream: ActivityFeedStream? = nil) {
+    init(
+        db: MemoryDashboardSource,
+        settings: SettingsStore,
+        activityStream: ActivityFeedStream? = nil,
+        insightsPolisher: InsightsEngine.Polisher? = nil
+    ) {
         self.db = db
         self.settings = settings
         self.activityStream = activityStream ?? ActivityFeedStream(source: db)
+        // Default polisher: no-op (throws). The production polisher that
+        // shells out to the user's Claude Code / Codex CLI lands as a
+        // follow-up — the heuristic Pass 1 already produces a useful card
+        // body, so this gracefully degrades.
+        self.insightsPolisher = insightsPolisher ?? { _ in
+            throw InsightsPolisherError.notConfigured
+        }
         self.topAppsWindow = settings.topAppsWindow
     }
+
+    private enum InsightsPolisherError: Error { case notConfigured }
 
     /// View-driven task. Consumes the activity stream and refreshes the
     /// summary cards on a 60-s cadence. Cancellation propagates via
@@ -83,14 +98,29 @@ final class MemoryDashboardStore {
     /// Re-pulls `topApps` and `recentSessions` from the DB using the current
     /// `topAppsWindow`. Sessions always look at the last 24 h regardless of
     /// the picker (the picker is a Top Apps concept). Insights re-run on a
-    /// 24-h frame window too.
+    /// 24-h frame window too — Pass 1 (heuristics) always; Pass 2 (LLM)
+    /// only when the cache is stale AND `settings.aiInsightsEnabled` is on.
     func refresh() async {
         async let topAppsTask = loadTopApps()
         async let framesTask  = load24HourFrames()
         let (apps, frames) = await (topAppsTask, framesTask)
         self.topApps = apps
         self.recentSessions = SessionsService.cluster(frames)
-        self.insights = InsightsEngine.candidates(from: frames)
+
+        // Insights: serve from cache if fresh; otherwise compute Pass 1 +
+        // optional Pass 2, then write the cache.
+        if let cached = InsightsEngine.loadCache() {
+            self.insights = cached
+            return
+        }
+        let heuristics = InsightsEngine.candidates(from: frames)
+        let polished = await InsightsEngine.polish(
+            heuristics,
+            enabled: settings.aiInsightsEnabled,
+            polisher: insightsPolisher
+        )
+        self.insights = polished
+        InsightsEngine.saveCache(polished, runtimeID: settings.synthesisRuntime.rawValue)
     }
 
     /// Updates the persisted window selection and re-runs the Top Apps query.
