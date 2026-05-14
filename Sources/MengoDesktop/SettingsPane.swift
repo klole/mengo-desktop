@@ -86,7 +86,7 @@ struct SettingsPane: View {
                     runtimeRow(runtime)
                 }
             }
-            Text("Mengo Flow uses this to turn recordings into reusable skills. Claude Code and Codex are configured automatically, and the screenpipe MCP is wired into whichever you pick.")
+            Text("Mengo Flow uses this to turn recordings into reusable skills. Claude Code and Codex are configured automatically, and the Mengo MCP is wired into whichever you pick.")
                 .font(Theme.caption).foregroundStyle(Theme.mutedText)
         }
     }

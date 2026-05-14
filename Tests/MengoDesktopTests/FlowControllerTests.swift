@@ -64,7 +64,7 @@ final class FlowControllerTests: XCTestCase {
         let base = tmpDir()
         let st = settings ?? makeSettings()
         return FlowController(
-            screenpipeToken: "sp-test",
+            recorderToken: "sp-test",
             executableOverride: executableOverride,
             synthesisPrompt: "PROMPT $MANIFEST_PATH",
             outputDir: base.appendingPathComponent("skills"),
@@ -87,8 +87,8 @@ final class FlowControllerTests: XCTestCase {
     func test_initial_isIdle() { XCTAssertEqual(makeController().flowState, .idle) }
 
     func test_preflight_pass() async { let r = await makeController().preflight(); XCTAssertNil(r) }
-    func test_preflight_screenpipeUnhealthy() async {
-        let r = await makeController(health: StubHealth(healthy: false)).preflight(); XCTAssertEqual(r, .screenpipeNotRunning)
+    func test_preflight_recorderUnhealthy() async {
+        let r = await makeController(health: StubHealth(healthy: false)).preflight(); XCTAssertEqual(r, .recorderNotRunning)
     }
     func test_preflight_audioPaused() async {
         let r = await makeController(health: StubHealth(audioPaused: true)).preflight(); XCTAssertEqual(r, .audioPaused)
@@ -328,7 +328,7 @@ final class FlowControllerTests: XCTestCase {
         try? "x".write(to: parent.appendingPathComponent("new-flow/SKILL.md"), atomically: true, encoding: .utf8)
         var hit = false
         let c = FlowController(
-            screenpipeToken: "sp-test",
+            recorderToken: "sp-test",
             executableOverride: { _ in URL(fileURLWithPath: "/tmp/nonex") },
             synthesisPrompt: "PROMPT $MANIFEST_PATH",
             outputDir: parent,

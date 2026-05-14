@@ -1,6 +1,6 @@
 import Foundation
 
-/// Locates the bundled `screenpipe` helper. Ported from V1's
+/// Locates the bundled recorder helper. Ported from V1's
 /// `ScreenpipeMenu/BinaryManager.swift`. The binary is embedded at build time
 /// (`build-mengo.sh`) — bundling, rather than downloading at runtime, is what
 /// lets the spawned helper inherit Mengo Desktop's Screen Recording / Microphone
@@ -22,7 +22,7 @@ enum BinaryManager {
         return binaryURL
     }
 
-    /// Read the bundled screenpipe version via `--version`. Blocks briefly — only
+    /// Read the bundled recorder version via `--version`. Blocks briefly — only
     /// called during recorder startup.
     static func bundledVersion() -> String? {
         guard FileManager.default.isExecutableFile(atPath: binaryURL.path) else { return nil }

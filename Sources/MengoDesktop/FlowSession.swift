@@ -8,12 +8,12 @@ enum RecordingMode: String, Codable, Equatable {
     case retroactive
 }
 
-/// The time range Flow bookkeeps between Start and Stop. screenpipe (owned by
+/// The time range Flow bookkeeps between Start and Stop. The recorder (owned by
 /// Mengo Memory) does the actual capturing; this is just a span to hand the
 /// synthesizer.
 struct FlowSession: Equatable {
     let mode: RecordingMode
-    /// Mode `.retroactive` only — earliest point grabbed from screenpipe's buffer.
+    /// Mode `.retroactive` only — earliest point grabbed from the recorder's buffer.
     let bufferRangeStart: Date?
     /// When the user started narrating forward (clicked Start / Begin From Here).
     let activeRecordingStart: Date

@@ -3,29 +3,29 @@ import Observation
 import AVFoundation
 import ScreenCaptureKit
 
-/// Owns the screenpipe recorder lifecycle for Mengo Memory. Adapted from V1's
+/// Owns the recorder lifecycle for Mengo Memory. Adapted from V1's
 /// `ScreenpipeMenu/AppState.swift`, with dependencies injectable for tests.
 @Observable
 @MainActor
 final class RecorderController {
 
     private(set) var status: RecorderStatus = .idle
-    private(set) var screenpipeVersion: String?
-    private(set) var lastHealth: ScreenpipeHealth?
+    private(set) var recorderVersion: String?
+    private(set) var lastHealth: RecorderHealth?
     private(set) var recordingsSizeBytes: Int64?
 
     /// What the live recorder process was actually started with — drives the
     /// "Recording sources" sheet's pre-selection / "changed?" check and the
-    /// Memory pane's "displays" / "mic sources" tiles. `nil` ⇒ screenpipe's
+    /// Memory pane's "displays" / "mic sources" tiles. `nil` ⇒ the recorder's
     /// default (all monitors / default mic + system audio).
     private(set) var runningMonitorIDs: [Int]?
     private(set) var runningAudioDeviceNames: [String]?
     private(set) var runningAudioDisabled = false
 
-    /// The per-launch auth token the bundled screenpipe was started with — Flow
-    /// passes it as `SCREENPIPE_API_KEY` to `claude -p` so the screenpipe MCP can
+    /// The per-launch auth token the bundled recorder was started with — Flow
+    /// passes it as `SCREENPIPE_API_KEY` to `claude -p` so the recorder MCP can
     /// query Mengo's recorder.
-    let screenpipeToken: String
+    let recorderToken: String
 
     @ObservationIgnored private let process: RecorderProcessControlling
     @ObservationIgnored private let api: RecorderHealthAPI
@@ -45,10 +45,10 @@ final class RecorderController {
         requestPermissions: @escaping () async -> Void = RecorderController.requestSystemPermissions,
         pollInterval: Duration = .seconds(5),
         sourcesStore: RecordingSourcesStore = RecordingSourcesStore(),
-        sourceCatalog: RecordingSourceCatalog = ScreenpipeCLICatalog()
+        sourceCatalog: RecordingSourceCatalog = RecorderCLICatalog()
     ) {
         let token = RecorderProcess.newToken()
-        self.screenpipeToken = token
+        self.recorderToken = token
         self.process = processFactory(token)
         self.api = apiFactory(token)
         self.ensureBinaryClosure = ensureBinary
@@ -67,7 +67,7 @@ final class RecorderController {
             .appendingPathComponent("Logs/MengoDesktop/recorder.log")
     }
 
-    /// When the current recording session started, derived from screenpipe's reported uptime.
+    /// When the current recording session started, derived from the recorder's reported uptime.
     var recordingSince: Date? {
         guard status == .recording, let up = lastHealth?.pipeline?.uptimeSecs else { return nil }
         return Date().addingTimeInterval(-up)
@@ -81,10 +81,10 @@ final class RecorderController {
         let binaryURL: URL
         do { binaryURL = try ensureBinaryClosure() }
         catch {
-            status = .error("screenpipe helper missing — rebuild the app (\(error))")
+            status = .error("recorder helper missing — rebuild the app (\(error))")
             return
         }
-        screenpipeVersion = BinaryManager.bundledVersion()
+        recorderVersion = BinaryManager.bundledVersion()
         await requestPermissionsClosure()
         await spawnAndPoll(binaryURL: binaryURL)
     }

@@ -2,7 +2,7 @@ import Foundation
 
 /// Persists which displays / microphones the user wants recorded.
 ///
-/// `nil` means "leave it to screenpipe's default" — all monitors / default mic +
+/// `nil` means "leave it to the recorder's default" — all monitors / default mic +
 /// system audio — so an untouched install records exactly as it ships. An
 /// explicitly **empty** `selectedAudioDeviceNames` means "no audio" (`--disable-audio`),
 /// which is why it's stored distinctly from `nil`. Monitor IDs are re-validated

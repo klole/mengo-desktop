@@ -8,7 +8,7 @@ enum SynthesisResult: Equatable {
 /// Spawns `claude -p` (or any subprocess) for skill synthesis, tees its output
 /// to a log file, and parses the final `{"status":...}` line of stdout. Ported
 /// from V1's `ScreenpipeFlow/SynthesisRunner`; the only change is an
-/// `environment:` parameter (V2 passes `SCREENPIPE_API_KEY` so the screenpipe
+/// `environment:` parameter (V2 passes `SCREENPIPE_API_KEY` so the recorder
 /// MCP child can authenticate against Mengo's recorder, plus a sane `PATH`).
 enum SynthesisRunner {
 

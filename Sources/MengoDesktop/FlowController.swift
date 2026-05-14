@@ -38,7 +38,7 @@ struct RecorderPreflightHealth: FlowPreflightHealth {
 }
 
 /// Owns the Mengo Flow product: the record→synthesize→review→save loop. Adapted
-/// from V1's `ScreenpipeFlow/{RecordingController,AppState}`. screenpipe is
+/// from V1's `ScreenpipeFlow/{RecordingController,AppState}`. The recorder is
 /// already running (owned by Mengo Memory / Phase 2), so Flow only preflights
 /// it; it never starts the recorder.
 @Observable
@@ -46,7 +46,7 @@ struct RecorderPreflightHealth: FlowPreflightHealth {
 final class FlowController {
 
     enum PreflightFailure: Equatable {
-        case screenpipeNotRunning
+        case recorderNotRunning
         case audioPaused
         case runtimeNotFound(SynthesisRuntime)
         case runtimeMCPNotConfigured(SynthesisRuntime)
@@ -61,7 +61,7 @@ final class FlowController {
     private(set) var hotkeyNote: String?
 
     // Injected deps.
-    @ObservationIgnored private let screenpipeToken: String
+    @ObservationIgnored private let recorderToken: String
     @ObservationIgnored private let executableOverride: (SynthesisRuntime) -> URL?
     @ObservationIgnored private let synthesisPrompt: String
     @ObservationIgnored let outputDir: URL          // ~/.claude/skills
@@ -86,7 +86,7 @@ final class FlowController {
     /// The manifest written for the last (re)synthesis, for Retry / source-id.
     @ObservationIgnored private var lastManifestURL: URL?
 
-    init(screenpipeToken: String,
+    init(recorderToken: String,
          executableOverride: @escaping (SynthesisRuntime) -> URL? = { $0.findExecutable() },
          synthesisPrompt: String,
          outputDir: URL,
@@ -104,7 +104,7 @@ final class FlowController {
          hudHide: @escaping () -> Void,
          notify: @escaping (String) -> Void,
          onPreflightFailure: @escaping @MainActor (PreflightFailure) -> Void = { FlowController.presentDefaultPreflightAlert($0) }) {
-        self.screenpipeToken = screenpipeToken
+        self.recorderToken = recorderToken
         self.executableOverride = executableOverride
         self.synthesisPrompt = synthesisPrompt
         self.outputDir = outputDir
@@ -137,7 +137,7 @@ final class FlowController {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appendingPathComponent("MengoDesktop/flows", isDirectory: true)
         return FlowController(
-            screenpipeToken: recorder.screenpipeToken,
+            recorderToken: recorder.recorderToken,
             executableOverride: { $0.findExecutable() },
             synthesisPrompt: Self.loadSynthesisPrompt(),
             outputDir: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/skills", isDirectory: true),
@@ -145,7 +145,7 @@ final class FlowController {
             recoveryDir: appSupport.appendingPathComponent("recovery", isDirectory: true),
             library: FlowLibrary(),
             health: RecorderPreflightHealth(recorder: recorder),
-            moments: ScreenpipeSearchClient(token: recorder.screenpipeToken),
+            moments: MemorySearchClient(token: recorder.recorderToken),
             settings: settings,
             entitlement: { [weak account] in .init(isPro: account?.isPro ?? false, flowLimit: account?.flowLimit) },
             hudShow: { session, onStop in hud.show(session: session, onStop: onStop) },
@@ -159,7 +159,7 @@ final class FlowController {
         Log.line("WARNING: synthesis-prompt.md not found in bundle — using minimal fallback")
         return """
         Synthesize a Claude Code skill from the recording described by the manifest at $MANIFEST_PATH. \
-        Read the manifest, use the screenpipe MCP tools (mcp__screenpipe__*) to fetch the audio narration \
+        Read the manifest, use the recorder MCP tools (mcp__screenpipe__*) to fetch the audio narration \
         (= intent), OCR/accessibility (= evidence), and key screenshots over the time range, then write \
         SKILL.md, flow.json, and frames/*.png into <outputDir>/<slug>/. On success print exactly: \
         {"status":"ok","outputDir":"<absolute path>","slug":"<slug>"}; on failure: {"status":"error","message":"<reason>"}.
@@ -170,24 +170,25 @@ final class FlowController {
 
     func preflight() async -> PreflightFailure? {
         let s = await health.snapshot()
-        if !s.healthy { return .screenpipeNotRunning }
+        if !s.healthy { return .recorderNotRunning }
         if s.audioPaused { return .audioPaused }
         let runtime = settings.synthesisRuntime
         guard runtime.isAvailable, let exe = executableOverride(runtime) else { return .runtimeNotFound(runtime) }
-        if await Self.mcpListLacksScreenpipe(executable: exe, runtime: runtime) { return .runtimeMCPNotConfigured(runtime) }
+        if await Self.mcpListLacksRecorderEntry(executable: exe, runtime: runtime) { return .runtimeMCPNotConfigured(runtime) }
         return nil
     }
 
     /// Best-effort: returns true only if `<exe> mcp list` *succeeds* and doesn't
-    /// mention "screenpipe". If we can't run it, don't block.
-    private static func mcpListLacksScreenpipe(executable: URL, runtime: SynthesisRuntime) async -> Bool {
+    /// mention the recorder's MCP entry (literal substring "screenpipe", since that's
+    /// the upstream MCP server's id). If we can't run it, don't block.
+    private static func mcpListLacksRecorderEntry(executable: URL, runtime: SynthesisRuntime) async -> Bool {
         await Task.detached { () -> Bool in
             let p = Process(); p.executableURL = executable; p.arguments = runtime.mcpListArguments
             let out = Pipe(); p.standardOutput = out; p.standardError = Pipe()
             guard (try? p.run()) != nil else { return false }
             let data = out.fileHandleForReading.readDataToEndOfFile(); p.waitUntilExit()
             guard p.terminationStatus == 0, let text = String(data: data, encoding: .utf8) else { return false }
-            return runtime.mcpListLacksScreenpipe(in: text)
+            return runtime.mcpListLacksRecorderEntry(in: text)
         }.value
     }
 
@@ -216,7 +217,7 @@ final class FlowController {
     func beginBrowsingTimeline() { if case .idle = flowState { flowState = .browsingTimeline } }
     func cancelBrowsingTimeline() { if case .browsingTimeline = flowState { flowState = .idle } }
 
-    /// Recent moments from screenpipe's buffer for the picker (decimated to ≈one per 15 s).
+    /// Recent moments from the recorder's buffer for the picker (decimated to ≈one per 15 s).
     func loadMoments(lookbackMinutes: Int) async throws -> [Moment] {
         let end = now()
         return try await moments.momentIndex(from: end.addingTimeInterval(-Double(lookbackMinutes) * 60), to: end, limit: 400)
@@ -280,10 +281,10 @@ final class FlowController {
 
         // ~/.claude/skills/ is behind the runtime's sensitive-file gate. Each runtime's
         // invocation builder embeds the right bypass flag + --add-dir whitelist.
-        // SCREENPIPE_API_KEY: so the screenpipe MCP child (spawned by the runtime) can authenticate against Mengo's recorder.
+        // SCREENPIPE_API_KEY: so the recorder MCP child (spawned by the runtime) can authenticate against Mengo's recorder.
         // PATH: a Finder-launched .app has a minimal PATH; prepend common locations so `claude`/`codex`/`npx`/`node` resolve.
         var env = ProcessInfo.processInfo.environment
-        env["SCREENPIPE_API_KEY"] = screenpipeToken
+        env["SCREENPIPE_API_KEY"] = recorderToken
         let home = NSHomeDirectory()
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(home)/.local/bin:\(home)/bin:" + (env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin")
 
@@ -415,7 +416,7 @@ final class FlowController {
     static func presentDefaultPreflightAlert(_ f: PreflightFailure) {
         let a = NSAlert()
         switch f {
-        case .screenpipeNotRunning:
+        case .recorderNotRunning:
             a.messageText = "The recorder isn't running"
             a.informativeText = "Mengo Flow needs Mengo Memory's recorder. Check the Memory tab."
         case .audioPaused:
@@ -426,7 +427,7 @@ final class FlowController {
             let where_ = runtime.executableSearchPaths.joined(separator: ", ")
             a.informativeText = "Install the \(runtime.displayName) CLI, then retry. Flow looked in: \(where_)"
         case .runtimeMCPNotConfigured(let runtime):
-            a.messageText = "The screenpipe MCP isn't set up for \(runtime.displayName)"
+            a.messageText = "The Mengo MCP isn't set up for \(runtime.displayName)"
             a.informativeText = "Run this in a terminal, then retry:\n\n\(runtime.mcpAddCommand)"
             a.addButton(withTitle: "Copy command"); a.addButton(withTitle: "OK")
             if a.runModal() == .alertFirstButtonReturn {

@@ -30,8 +30,8 @@ final class SynthesisRuntimeTests: XCTestCase {
         if case .file(let u) = inv.finalStatusSource { XCTAssertEqual(u, last) } else { XCTFail("expected .file") }
     }
     func test_preflight_mcpListCheck() {
-        XCTAssertTrue(SynthesisRuntime.claudeCode.mcpListLacksScreenpipe(in: "no mcps here"))
-        XCTAssertFalse(SynthesisRuntime.claudeCode.mcpListLacksScreenpipe(in: "screenpipe   npx -y screenpipe-mcp"))
+        XCTAssertTrue(SynthesisRuntime.claudeCode.mcpListLacksRecorderEntry(in: "no mcps here"))
+        XCTAssertFalse(SynthesisRuntime.claudeCode.mcpListLacksRecorderEntry(in: "screenpipe   npx -y screenpipe-mcp"))
         XCTAssertEqual(SynthesisRuntime.codex.mcpAddCommand, "codex mcp add screenpipe -- npx -y screenpipe-mcp")
         XCTAssertEqual(SynthesisRuntime.claudeCode.mcpAddCommand, "claude mcp add screenpipe -s user -- npx -y screenpipe-mcp")
     }

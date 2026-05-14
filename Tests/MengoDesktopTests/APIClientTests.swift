@@ -10,9 +10,9 @@ final class APIClientTests: XCTestCase {
         return try Data(contentsOf: url)
     }
 
-    func test_screenpipeHealth_decodesCoreAndRichFields() throws {
+    func test_recorderHealth_decodesCoreAndRichFields() throws {
         let data = try loadFixture("health-ok.json")
-        let h = try JSONDecoder().decode(ScreenpipeHealth.self, from: data)
+        let h = try JSONDecoder().decode(RecorderHealth.self, from: data)
         XCTAssertEqual(h.status, "healthy")
         XCTAssertEqual(h.frameStatus, "ok")
         XCTAssertEqual(h.audioStatus, "ok")
@@ -25,13 +25,13 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(h.lastFrameTimestamp, "2026-05-12T18:31:18-06:00")
     }
 
-    func test_screenpipeHealth_decodesFromMinimalBody() throws {
+    func test_recorderHealth_decodesFromMinimalBody() throws {
         let data = Data(#"{"status":"healthy","frame_status":"ok","audio_status":"degraded"}"#.utf8)
-        let health = try JSONDecoder().decode(ScreenpipeHealth.self, from: data)
+        let health = try JSONDecoder().decode(RecorderHealth.self, from: data)
         XCTAssertEqual(health.audioStatus, "degraded")
     }
 
-    func test_apiClient_baseURLIsLocalScreenpipe() async {
+    func test_apiClient_baseURLIsLocalRecorder() async {
         let client = APIClient(token: "sp-deadbeef")
         let base = await client.baseURLForTesting.absoluteString
         XCTAssertEqual(base, "http://127.0.0.1:3030")

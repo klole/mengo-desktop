@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The `.browsingTimeline` UI — "pick where the task started" over screenpipe's
+/// The `.browsingTimeline` UI — "pick where the task started" over the recorder's
 /// recent buffer (a moment list, not thumbnails). Adapted from V1's `TimelineWindow`.
 struct TimelinePickerView: View {
     let flow: FlowController
@@ -58,7 +58,7 @@ struct TimelinePickerView: View {
                 Text(e).font(Theme.body).foregroundStyle(Theme.secondaryText)
             }.frame(maxWidth: .infinity, minHeight: 200)
         } else if moments.isEmpty {
-            Text("No screenpipe data in that range. Try a longer look-back.")
+            Text("No Mengo Memory data in that range. Try a longer look-back.")
                 .font(Theme.body).foregroundStyle(Theme.mutedText).frame(maxWidth: .infinity, minHeight: 200)
         } else {
             ScrollView {

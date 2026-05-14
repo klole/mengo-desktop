@@ -33,7 +33,7 @@ enum MemoryFormatting {
         return date.formatted(date: .omitted, time: .shortened)
     }
 
-    /// Parse a screenpipe timestamp string leniently. Returns nil rather than throwing,
+    /// Parse a recorder timestamp string leniently. Returns nil rather than throwing,
     /// so a malformed value never breaks a `/health` decode that carries it elsewhere.
     static func parseTimestamp(_ string: String) -> Date? {
         guard !string.isEmpty else { return nil }

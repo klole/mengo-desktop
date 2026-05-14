@@ -1,15 +1,15 @@
 import Foundation
 
 /// The recorder-process operations `RecorderController` depends on. Lets tests
-/// drive the controller with a stub instead of spawning a real screenpipe.
+/// drive the controller with a stub instead of spawning the real recorder.
 protocol RecorderProcessControlling: AnyObject {
     var isRunning: Bool { get }
     func start(binaryURL: URL, extraArguments: [String]) throws
     func stop()
 }
 
-/// Spawns and tears down the bundled `screenpipe record` helper. Ported from
-/// V1's `ScreenpipeMenu/RecorderProcess.swift`; log path renamed to MengoDesktop.
+/// Spawns and tears down the bundled recorder helper (`screenpipe record`). Ported
+/// from V1's `ScreenpipeMenu/RecorderProcess.swift`; log path renamed to MengoDesktop.
 final class RecorderProcess: RecorderProcessControlling {
     private var process: Process?
     private var logHandle: FileHandle?
@@ -41,7 +41,7 @@ final class RecorderProcess: RecorderProcessControlling {
         var env = ProcessInfo.processInfo.environment
         env["SCREENPIPE_API_KEY"] = token
         // .app processes launched via Finder get a minimal PATH that omits the user's
-        // shell paths — and screenpipe needs to find ffmpeg. Prepend common locations.
+        // shell paths — and the recorder needs to find ffmpeg. Prepend common locations.
         let existingPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(NSHomeDirectory())/.local/bin:\(NSHomeDirectory())/bin:\(existingPath)"
         proc.environment = env

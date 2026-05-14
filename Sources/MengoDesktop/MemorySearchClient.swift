@@ -1,6 +1,6 @@
 import Foundation
 
-/// One moment from screenpipe's recent capture — used by the "grab last N minutes"
+/// One moment from the recorder's recent capture — used by the "grab last N minutes"
 /// picker. Carries enough to recognise *when* a task started without fetching an image.
 struct Moment: Equatable, Hashable, Identifiable {
     let timestamp: Date
@@ -9,22 +9,22 @@ struct Moment: Equatable, Hashable, Identifiable {
     var id: Date { timestamp }
 }
 
-/// Abstracts the screenpipe `/search` query so `FlowController` tests can stub it.
+/// Abstracts the recorder's `/search` query so `FlowController` tests can stub it.
 protocol MomentIndexing: Sendable {
     func momentIndex(from: Date, to: Date, limit: Int) async throws -> [Moment]
 }
 
 /// A no-op `MomentIndexing` — the default in `FlowController.init` when no real
-/// recorder token is available (production wires a `ScreenpipeSearchClient` via `live(…)`).
+/// recorder token is available (production wires a `MemorySearchClient` via `live(…)`).
 struct NullMomentIndexing: MomentIndexing {
     func momentIndex(from: Date, to: Date, limit: Int) async throws -> [Moment] { [] }
 }
 
-/// Queries screenpipe's local HTTP API (`GET /search?content_type=ocr`) for a
+/// Queries the recorder's local HTTP API (`GET /search?content_type=ocr`) for a
 /// decimated list of recent moments, authed with the recorder's per-launch token.
 /// (Mirrors V1's `ScreenpipeClient.thumbnailIndex`, minus the `auth token` discovery
-/// — V2's token comes from `RecorderController.screenpipeToken`.)
-struct ScreenpipeSearchClient: MomentIndexing {
+/// — V2's token comes from `RecorderController.recorderToken`.)
+struct MemorySearchClient: MomentIndexing {
     let token: String
     var baseURL = URL(string: "http://127.0.0.1:3030")!
     var urlSession: URLSession = .shared

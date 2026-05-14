@@ -27,9 +27,9 @@ final class RecorderControllerTests: XCTestCase {
         private(set) var audioStopCount = 0
         private(set) var audioStartCount = 0
         func setShouldFailHealth(_ v: Bool) { shouldFailHealth = v }
-        func health() async throws -> ScreenpipeHealth {
+        func health() async throws -> RecorderHealth {
             if shouldFailHealth { throw URLError(.cannotConnectToHost) }
-            return ScreenpipeHealth(status: "healthy", frameStatus: "ok", audioStatus: "ok")
+            return RecorderHealth(status: "healthy", frameStatus: "ok", audioStatus: "ok")
         }
         func audioStop() async throws { audioStopCount += 1 }
         func audioStart() async throws { audioStartCount += 1 }
@@ -50,12 +50,12 @@ final class RecorderControllerTests: XCTestCase {
         return RecordingSourcesStore(defaults: d)
     }
 
-    /// Build a controller wired to stubs — no real screenpipe / TCC / poll delay.
+    /// Build a controller wired to stubs — no real recorder / TCC / poll delay.
     private func makeController(process: StubProcess = StubProcess(),
                                api: StubAPI = StubAPI(),
                                store: RecordingSourcesStore? = nil,
                                catalog: RecordingSourceCatalog = StubCatalog(),
-                               ensureBinary: @escaping () throws -> URL = { URL(fileURLWithPath: "/tmp/fake-screenpipe") })
+                               ensureBinary: @escaping () throws -> URL = { URL(fileURLWithPath: "/tmp/fake-recorder") })
         -> RecorderController {
         RecorderController(
             processFactory: { _ in process },

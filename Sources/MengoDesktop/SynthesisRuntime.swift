@@ -46,7 +46,7 @@ enum SynthesisRuntime: String, Codable, CaseIterable, Identifiable {
 
     var versionArguments: [String] { ["--version"] }
     var mcpListArguments: [String] { ["mcp", "list"] }
-    func mcpListLacksScreenpipe(in output: String) -> Bool { !output.lowercased().contains("screenpipe") }
+    func mcpListLacksRecorderEntry(in output: String) -> Bool { !output.lowercased().contains("screenpipe") }
     var mcpAddCommand: String {
         switch self {
         case .codex: return "codex mcp add screenpipe -- npx -y screenpipe-mcp"

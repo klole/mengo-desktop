@@ -1,10 +1,10 @@
 import Foundation
 
-/// screenpipe's `/health` response — the subset Mengo Memory surfaces. screenpipe
+/// The recorder's `/health` response — the subset Mengo Memory surfaces. The recorder
 /// includes more; unknown keys are ignored, and any field a build omits is `nil`.
 /// `lastFrameTimestamp` is kept as a raw string and parsed leniently by the UI so a
 /// malformed value can't fail the whole decode.
-struct ScreenpipeHealth: Decodable, Sendable {
+struct RecorderHealth: Decodable, Sendable {
     var status: String
     var frameStatus: String
     var audioStatus: String
@@ -41,14 +41,14 @@ struct ScreenpipeHealth: Decodable, Sendable {
     }
 }
 
-/// The screenpipe HTTP operations `RecorderController` depends on.
+/// The recorder HTTP operations `RecorderController` depends on.
 protocol RecorderHealthAPI: Sendable {
-    func health() async throws -> ScreenpipeHealth
+    func health() async throws -> RecorderHealth
     func audioStart() async throws
     func audioStop() async throws
 }
 
-/// Thin client over screenpipe's local HTTP API. Ported from V1's
+/// Thin client over the recorder's local HTTP API. Ported from V1's
 /// `ScreenpipeMenu/APIClient.swift`.
 actor APIClient: RecorderHealthAPI {
     private let baseURL = URL(string: "http://127.0.0.1:3030")!
@@ -70,8 +70,8 @@ actor APIClient: RecorderHealthAPI {
         case noResponse
     }
 
-    func health() async throws -> ScreenpipeHealth {
-        try await get("/health", as: ScreenpipeHealth.self)
+    func health() async throws -> RecorderHealth {
+        try await get("/health", as: RecorderHealth.self)
     }
 
     func audioStop() async throws { try await post("/audio/stop") }

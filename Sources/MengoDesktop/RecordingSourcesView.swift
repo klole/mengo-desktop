@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// "Recording sources" sheet — pick which displays and microphones screenpipe
-/// records. Styled after macOS → Settings → Displays: a row of display thumbnails
+/// "Recording sources" sheet — pick which displays and microphones the recorder
+/// captures. Styled after macOS → Settings → Displays: a row of display thumbnails
 /// up top, an audio-device toggle list below, an "Apply & restart" footer.
 /// Applying writes `RecordingSourcesStore` and restarts the recorder.
 struct RecordingSourcesView: View {
     let recorder: RecorderController
     var store = RecordingSourcesStore()
-    var catalog: RecordingSourceCatalog = ScreenpipeCLICatalog()
+    var catalog: RecordingSourceCatalog = RecorderCLICatalog()
     @Environment(\.dismiss) private var dismiss
 
     @State private var loading = true
@@ -226,7 +226,7 @@ struct RecordingSourcesView: View {
             } else if let live = recorder.lastHealth?.audioPipeline?.audioDevices, !live.isEmpty {
                 selectedDeviceNames = Set(devs.filter { live.contains($0.name) }.map(\.name))
             } else {
-                selectedDeviceNames = defaultAudioSet   // recorder down / unknown → screenpipe's default
+                selectedDeviceNames = defaultAudioSet   // recorder down / unknown → recorder's default
             }
 
             baselineMonitorIDs = selectedMonitorIDs
@@ -242,7 +242,7 @@ struct RecordingSourcesView: View {
         applying = true
         // All displays selected ⇒ store nil (so a newly-plugged display is auto-included next launch).
         store.selectedMonitorIDs = (selectedMonitorIDs.count == monitors.count) ? nil : selectedMonitorIDs.sorted()
-        // Audio: none ⇒ [] (disable); equals screenpipe's default set ⇒ nil; else the explicit names.
+        // Audio: none ⇒ [] (disable); equals the recorder's default set ⇒ nil; else the explicit names.
         if selectedDeviceNames.isEmpty { store.selectedAudioDeviceNames = [] }
         else if selectedDeviceNames == defaultAudioSet { store.selectedAudioDeviceNames = nil }
         else { store.selectedAudioDeviceNames = selectedDeviceNames.sorted() }

@@ -11,7 +11,7 @@ enum RecorderStatus: Equatable {
     case bothPaused
     case error(String)
 
-    /// True while screenpipe is meant to be running (recording or partially paused).
+    /// True while the recorder is meant to be running (recording or partially paused).
     var isRecording: Bool {
         switch self {
         case .recording, .audioPaused, .screenPaused, .bothPaused: return true

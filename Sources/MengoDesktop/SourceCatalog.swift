@@ -1,6 +1,6 @@
 import Foundation
 
-/// A display screenpipe can record. From `screenpipe vision list -o json`.
+/// A display the recorder can capture. From `screenpipe vision list -o json`.
 struct MonitorInfo: Equatable, Identifiable, Sendable {
     let id: Int
     let name: String
@@ -9,8 +9,8 @@ struct MonitorInfo: Equatable, Identifiable, Sendable {
     let isDefault: Bool
 }
 
-/// An audio device screenpipe can record. From `screenpipe audio list -o json`.
-/// `name` is what screenpipe wants on the command line (suffix included);
+/// An audio device the recorder can capture. From `screenpipe audio list -o json`.
+/// `name` is what the recorder CLI wants on the command line (suffix included);
 /// `displayName` strips the trailing `(input)`/`(output)` for the UI.
 struct AudioDeviceInfo: Equatable, Identifiable, Sendable {
     enum Kind: Equatable, Sendable { case input, output, unknown }
@@ -39,9 +39,9 @@ protocol RecordingSourceCatalog: Sendable {
     func availableAudioDevices() async throws -> [AudioDeviceInfo]
 }
 
-/// Shells out to the bundled `screenpipe` helper's `vision list` / `audio list`
+/// Shells out to the bundled recorder helper's `vision list` / `audio list`
 /// subcommands (JSON output). Runs the subprocess off the main actor.
-struct ScreenpipeCLICatalog: RecordingSourceCatalog {
+struct RecorderCLICatalog: RecordingSourceCatalog {
     var binaryURL: @Sendable () throws -> URL = { try BinaryManager.ensureBinary() }
 
     func availableMonitors() async throws -> [MonitorInfo] {
