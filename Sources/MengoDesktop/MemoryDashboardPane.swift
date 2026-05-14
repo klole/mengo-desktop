@@ -32,7 +32,7 @@ struct MemoryDashboardPane: View {
                     )
                     InsightsCarouselPlaceholder()
                     HStack(alignment: .top, spacing: 22) {
-                        RecentSessionsPlaceholder().frame(maxWidth: .infinity)
+                        RecentSessionsCard(store: store).frame(maxWidth: .infinity)
                         TopApplicationsPlaceholder().frame(maxWidth: .infinity)
                     }
                     QuickActionsRowPlaceholder()
@@ -77,16 +77,6 @@ private struct InsightsCarouselPlaceholder: View {
             title: "Mengo Insights",
             caption: "Personalized insights from your digital world.",
             hint: "Insights land in Part D — heuristic candidates plus an opt-in LLM polish pass."
-        )
-    }
-}
-
-private struct RecentSessionsPlaceholder: View {
-    var body: some View {
-        PlaceholderCard(
-            title: "Recent Sessions",
-            caption: "Recent focused-work blocks across your apps.",
-            hint: "Sessions land in Part C — clustered from the recorder DB."
         )
     }
 }
