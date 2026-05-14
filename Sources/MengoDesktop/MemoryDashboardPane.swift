@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// The Memory Dashboard — full rewrite of the old `MemoryPane`. Two-column
 /// layout: a center column (hero + middle cards + quick actions) and a
@@ -8,6 +9,7 @@ import SwiftUI
 /// Part B lands the hero + right rail; the four middle cards are
 /// placeholders until Parts C and D fill them in.
 struct MemoryDashboardPane: View {
+    let appState: AppState
     let recorder: RecorderController
     let account: AccountStore
     let settings: SettingsStore
@@ -15,6 +17,7 @@ struct MemoryDashboardPane: View {
 
     @State private var showAdvancedSources = false
     @State private var showScheduleStub = false
+    @State private var importPanel: NSOpenPanel?
 
     private let narrowBreakpoint: CGFloat = 1100
 
@@ -35,7 +38,13 @@ struct MemoryDashboardPane: View {
                         RecentSessionsCard(store: store).frame(maxWidth: .infinity)
                         TopApplicationsCard(store: store).frame(maxWidth: .infinity)
                     }
-                    QuickActionsRowPlaceholder()
+                    QuickActionsRow(
+                        onConfigureSources: { showAdvancedSources = true },
+                        onCreateFlow:       { appState.selectedSection = .flow },
+                        onTrainSkill:       { appState.selectedSection = .flow },
+                        onOpenStudio:       { openStudio() },
+                        onImportWorkflow:   { importWorkflow() }
+                    )
                     if !useRail {
                         ActivityFeedView(store: store)   // tucks below the middle column
                     }
@@ -67,6 +76,28 @@ struct MemoryDashboardPane: View {
             await store.task()
         }
     }
+
+    // MARK: - Quick Actions routes
+
+    private func openStudio() {
+        if account.isPro {
+            appState.selectedSection = .studio
+        } else {
+            Task { NSWorkspace.shared.open(await account.webURL(path: "/upgrade")) }
+        }
+    }
+
+    private func importWorkflow() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.title = "Import workflow"
+        if panel.runModal() == .OK, let url = panel.url {
+            Log.line("Import workflow: \(url.path) — full import lands in the Studio phase.")
+        }
+    }
 }
 
 // MARK: - Placeholders (replaced in Parts C + D)
@@ -77,16 +108,6 @@ private struct InsightsCarouselPlaceholder: View {
             title: "Mengo Insights",
             caption: "Personalized insights from your digital world.",
             hint: "Insights land in Part D — heuristic candidates plus an opt-in LLM polish pass."
-        )
-    }
-}
-
-private struct QuickActionsRowPlaceholder: View {
-    var body: some View {
-        PlaceholderCard(
-            title: "Quick Actions",
-            caption: "Configure Sources · Create Flow · Train Skill · Open Studio · Import Workflow",
-            hint: "Quick Actions land in Part C — five tiles routing to existing destinations."
         )
     }
 }

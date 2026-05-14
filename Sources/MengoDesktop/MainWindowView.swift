@@ -49,7 +49,7 @@ struct MainWindowView: View {
         } detail: {
             Group {
                 switch appState.selectedSection {
-                case .memory:   MemoryDashboardPane(recorder: recorder, account: account, settings: settings, store: memoryDashboard)
+                case .memory:   MemoryDashboardPane(appState: appState, recorder: recorder, account: account, settings: settings, store: memoryDashboard)
                 case .flow:     FlowPane(flow: flow)
                 case .library:  LibraryPane(flow: flow)
                 case .settings: SettingsPane(account: account, settings: settings, recorder: recorder, flow: flow)
