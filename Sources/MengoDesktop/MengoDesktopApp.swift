@@ -46,7 +46,7 @@ struct MengoDesktopApp: App {
         Window("Mengo Desktop", id: "main") {
             Group {
                 if case .signedIn = account.state {
-                    MainWindowView(appState: appState, recorder: recorder, account: account, settings: settings, flow: flow)
+                    MainWindowView(appState: appState, recorder: recorder, account: account, settings: settings, flow: flow, memoryDashboard: memoryDashboard)
                 } else {
                     SignInView(account: account)
                 }

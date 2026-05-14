@@ -12,6 +12,7 @@ struct MainWindowView: View {
     let account: AccountStore
     let settings: SettingsStore
     let flow: FlowController
+    let memoryDashboard: MemoryDashboardStore
 
     var body: some View {
         NavigationSplitView {
@@ -48,7 +49,7 @@ struct MainWindowView: View {
         } detail: {
             Group {
                 switch appState.selectedSection {
-                case .memory:   MemoryPane(recorder: recorder)
+                case .memory:   MemoryDashboardPane(recorder: recorder, account: account, settings: settings, store: memoryDashboard)
                 case .flow:     FlowPane(flow: flow)
                 case .library:  LibraryPane(flow: flow)
                 case .settings: SettingsPane(account: account, settings: settings, recorder: recorder, flow: flow)
