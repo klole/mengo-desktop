@@ -33,7 +33,7 @@ struct MemoryDashboardPane: View {
                         onShowAdvancedSources: { showAdvancedSources = true },
                         onShowSettings: { appState.selectedSection = .settings }
                     )
-                    InsightsCarouselPlaceholder()
+                    InsightsCarousel(insights: store.insights, onInvoke: invokeInsightCTA)
                     HStack(alignment: .top, spacing: 22) {
                         RecentSessionsCard(store: store, onViewAll: { listSheet = .sessions })
                             .frame(maxWidth: .infinity)
@@ -83,6 +83,21 @@ struct MemoryDashboardPane: View {
         }
     }
 
+    // MARK: - Insight CTA routes
+
+    private func invokeInsightCTA(_ cta: InsightCTA) {
+        switch cta {
+        case .createSkill, .createFlow:
+            appState.selectedSection = .flow
+        case .viewMemory:
+            // Time-range filter on MemoryListPage is a follow-up; for v1 the
+            // CTA opens the full activity list and the user can scroll.
+            listSheet = .activity
+        case .seeDetails:
+            listSheet = .activity
+        }
+    }
+
     // MARK: - Quick Actions routes
 
     private func openStudio() {
@@ -106,34 +121,3 @@ struct MemoryDashboardPane: View {
     }
 }
 
-// MARK: - Placeholders (replaced in Parts C + D)
-
-private struct InsightsCarouselPlaceholder: View {
-    var body: some View {
-        PlaceholderCard(
-            title: "Mengo Insights",
-            caption: "Personalized insights from your digital world.",
-            hint: "Insights land in Part D — heuristic candidates plus an opt-in LLM polish pass."
-        )
-    }
-}
-
-private struct PlaceholderCard: View {
-    let title: String
-    let caption: String
-    let hint: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(Theme.headline).foregroundStyle(Theme.primaryText)
-            Text(caption).font(Theme.body).foregroundStyle(Theme.secondaryText)
-            Text(hint).font(Theme.caption).foregroundStyle(Theme.mutedText)
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14).fill(Theme.cardBackground)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.separator, lineWidth: 1))
-        )
-    }
-}
