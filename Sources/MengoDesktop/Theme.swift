@@ -11,6 +11,7 @@ enum Theme {
     static let windowBackground   = Color(hex: 0x121315)
     static let paneBackground     = Color(hex: 0x17181B)
     static let cardBackground     = Color(hex: 0x1D1F23)
+    static let cardBackground2    = Color(hex: 0x202329)   // a notch lighter for dashboard cards
     static let elevatedBackground = Color(hex: 0x22242A)   // hover surface, one notch up
     static let separator          = Color(hex: 0x2A2D33)
 
@@ -27,6 +28,14 @@ enum Theme {
     static let recording = Color(hex: 0x3DD56B)   // green — recording
     static let paused    = accent                  // orange — paused (audio/screen/both)
     static let stopped   = Color(hex: 0xE5484D)   // red — error
+
+    // MARK: - Memory orb (the always-orange hero globe)
+    // Always orange — it's the Mengo mascot. Status of the recorder is shown
+    // separately in the activity pill at the top of the hero, never on the orb.
+    static let orbCore   = Color(hex: 0xFFB06A)
+    static let orbMid    = Color(hex: 0xD9740C)
+    static let orbEdge   = Color(hex: 0x2A1206)
+    static let orbGlow   = Color(hex: 0xFF8A3D).opacity(0.28)
 
     // MARK: - Typography
 
