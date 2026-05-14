@@ -40,3 +40,87 @@ Run before tagging `mengo-v2-phase-2-memory`. Spec:
 - [ ] `pkill screenpipe` → within ~30 s the pane shows "⚠ Recorder stopped" + the reason + a prominent **Restart recorder** button; clicking it (or the menu "Restart recorder") brings it back to green.
 - [ ] Close the main window → app stays in the Dock, glyph still green (recording continues).
 - [ ] **Quit** (⌘Q / menu) → app exits; `pgrep screenpipe` shows no orphan; `~/Library/Logs/MengoDesktop/app.log` has `app terminating`.
+
+## Memory Dashboard (the 2026-05-14 rewrite)
+
+The dashboard supersedes the old debug-screen Memory pane. The right-rail
+activity feed appears only when the window is ≥ 1100 pt wide — narrower
+windows tuck it under Top Applications.
+
+### Hero
+
+- [ ] The orange orb is **always orange** (Mengo brand). It scales + glows
+  in a slow pulse only while the recorder is actively running.
+- [ ] Activity pill reflects state:
+  `Memory Inactive` (red) → `Starting…` (orange) → `Memory Active` (green)
+  → `Memory Paused` (amber) → `Memory Error` (red).
+- [ ] Status word + subtitle (`Mengo is sleeping` / `…watching` / `…paused` /
+  `…hit a snag`) follow `recorder.status`.
+- [ ] **Start Watching** button switches label/icon by state:
+  Start Watching → Stop Watching → Resume → Starting… (disabled spinner).
+- [ ] **Monitors** pill opens a menu populated from `/health` `monitors`;
+  **Audio sources** from `audio_pipeline.audio_devices`. Each menu's last
+  item ("More options…") opens the existing `RecordingSourcesView` sheet.
+- [ ] **Capture mode** pill cycles through Smart Capture / Changes only /
+  Periodic. Picking a different mode while recording restarts the recorder
+  with the new `--fps` flag (verify in
+  `~/Library/Logs/MengoDesktop/recorder.log`).
+- [ ] **Settings gear** routes to the Settings tab.
+
+### Mengo Insights carousel
+
+- [ ] On a fresh DB (no recorded activity yet) the carousel renders an
+  empty-state card with the "Mengo will surface patterns here." copy.
+- [ ] After several hours of activity, the carousel shows up to 4 cards:
+  Workflow Detected / Automation Opportunity / Memory Insight / Focus
+  Pattern. Each card has a CTA button (Create Skill / Create Flow / View
+  Memory / See Details) that routes appropriately.
+- [ ] With **Settings → Generate insight summaries with AI** off (default),
+  card bodies use templated text. With it on, the next refresh (≤10 min)
+  rewrites the bodies via the user's Claude Code / Codex CLI; the cached
+  result lands at `~/Library/Application Support/MengoDesktop/insights-cache.json`.
+
+### Recent Sessions
+
+- [ ] Up to 3 session tiles: 3-app icon stack + "<Dominant App> session"
+  title + optional subtitle (dominant window name OR "with <SecondApp>")
+  + duration + frame count + Open Session button.
+- [ ] **View All Sessions** opens the sessions list sheet.
+
+### Top Applications
+
+- [ ] Horizontal bars per app, orange capsule width proportional to share %.
+  Picker toggles Today / Last 7 days / Last 30 days; selection persists
+  across launches.
+- [ ] **View All Applications** opens the apps list sheet.
+
+### Quick Actions
+
+- [ ] Five tiles route correctly:
+  - Configure Sources → opens the advanced sources sheet
+  - Create Flow → Flow tab
+  - Train New Skill → Flow tab
+  - Open Studio → Studio tab (Pro) or `/upgrade` (Free, via web-handoff)
+  - Import Workflow → file picker (.json); selection is logged
+
+### Activity feed (right rail / tucked-under)
+
+- [ ] **Live** dot pulses; a new screenshot / transcription within the last
+  5 s lands at the top with the right icon (camera / waveform / globe).
+- [ ] Below the 1100 pt width threshold, the rail collapses below Top Apps —
+  nothing is lost.
+- [ ] **View All Activity** opens the activity list sheet.
+
+### Schedule Recording
+
+- [ ] Hero's **Schedule Recording** button opens the sheet.
+- [ ] Add a recurring rule (today's weekday, 1 min from now → 2 min from now).
+  Wait — the recorder auto-pauses at the end of the window. Add a fresh
+  rule starting now → it auto-resumes within ~5 s of the next health tick.
+- [ ] Delete a rule from the sheet → it stops enforcing.
+- [ ] An empty schedule does not pause / resume the recorder.
+
+### Settings → Generate insight summaries with AI
+
+- [ ] Toggle visible under Startup. Default off. Caption explains the 10-min
+  cache + per-launch behaviour.
