@@ -1,8 +1,48 @@
 # Mengo Desktop — Phase 4 manual smoke checklist
 
-The mengo.ai endpoints and Stripe checkout are out of scope for this phase (the
-website/Stripe owner builds them). Account flows here use the `MENGO_DEV_ACCOUNT`
-env-var hatch until the website ships.
+Phase 4A (account, sign-in, hard wall, Keychain, `mengo://`) has the website
+endpoints wired up — see the `Phase 4A end-to-end (website + desktop)` section
+below. Stripe checkout for `/upgrade` is still out of scope (the website/Stripe
+owner builds it). The `MENGO_DEV_ACCOUNT` env-var hatch remains for fast UI
+testing without a network call.
+
+## Phase 4A end-to-end (website + desktop)
+
+Tested 2026-05-14 against `http://localhost:3017` (Next.js dev). The desktop
+talks to it via `MENGO_API_BASE`.
+
+- [x] `POST /api/auth/request-link` mints a `mengo_magic_tokens` row + sends
+  via Resend (sandbox sender only delivers to the Resend account email; dev
+  responses include `devURL` when no email left the building).
+- [x] `POST /api/auth/exchange` consumes the token (single-use, 15min TTL)
+  and returns `{sessionToken, account}`.
+- [x] `GET /api/me` with `Authorization: Bearer <sessionToken>` returns the
+  account; unknown bearer → 401.
+- [x] `POST /api/auth/web-handoff` returns `{handoffCode}`; replays → 307
+  to `/sign-in`.
+- [x] `GET /auth/handoff?code=&next=/account` mints a `mengo_web_session`
+  cookie (HttpOnly, SameSite=Lax, 1-year), 307s to `next`. Open-redirect
+  attempts (`next=//evil.com`) fall back to `/account`.
+- [x] `GET /auth/open?token=…` renders the https → `mengo://auth` trampoline
+  for email clients.
+
+To repeat the end-to-end against localhost:
+
+```bash
+cd ../../website && npm install && npx next dev --port 3017
+# In another shell:
+MENGO_API_BASE=http://localhost:3017 swift run MengoDesktop
+# Enter your email in the hard-wall sign-in; check the Next.js dev console
+# for the magic link if Resend isn't delivering to your inbox.
+```
+
+Production gotchas:
+
+- Resend sandbox sender (`onboarding@resend.dev`) only emails the Resend
+  account holder. Verify a domain at https://resend.com/domains, then set
+  `MENGO_FROM_EMAIL=Mengo <hello@mengo.ai>` in the website's env.
+- mengo.ai DNS + Vercel deploy isn't wired up yet. Until it is, the desktop
+  must launch with `MENGO_API_BASE` pointing at the dev or staging URL.
 
 ## Build & tests (scriptable)
 

@@ -45,11 +45,23 @@ enum MengoAPIError: Error, LocalizedError, Equatable {
 }
 
 struct MengoAPIClient: MengoAPI {
-    var baseURL = URL(string: "https://mengo.ai")!
+    var baseURL = MengoAPIClient.defaultBaseURL()
     var urlSession: URLSession = {
         let c = URLSessionConfiguration.ephemeral; c.timeoutIntervalForRequest = 15
         return URLSession(configuration: c)
     }()
+
+    /// `MENGO_API_BASE` overrides this so a dev build can talk to `http://localhost:3000`
+    /// without rebuilding. Production launches always hit `https://mengo.ai`.
+    static func defaultBaseURL() -> URL {
+        if let override = ProcessInfo.processInfo.environment["MENGO_API_BASE"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !override.isEmpty,
+           let url = URL(string: override) {
+            return url
+        }
+        return URL(string: "https://mengo.ai")!
+    }
 
     func requestLink(email: String) async throws {
         _ = try await postJSON("/api/auth/request-link", body: ["email": email], bearer: nil)

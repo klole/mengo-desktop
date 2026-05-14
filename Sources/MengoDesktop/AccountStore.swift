@@ -103,15 +103,23 @@ final class AccountStore {
         if case .awaitingLink = state { state = .signedOut; lastError = nil }
     }
 
-    /// URL that opens `mengo.ai<path>` already-signed-in (via a one-time handoff code).
+    /// URL that opens `mengo.ai<path>` already-signed-in. We funnel through
+    /// `/auth/handoff?code=&next=<path>` instead of putting `?handoff=` on the
+    /// destination URL because Next.js can only write cookies from a route
+    /// handler. Tracks `MENGO_API_BASE` so dev builds route to localhost.
     /// Falls back to the bare URL if the handoff call fails.
     func webURL(path: String) async -> URL {
-        let base = URL(string: "https://mengo.ai")!.appendingPathComponent(path)
+        let base = MengoAPIClient.defaultBaseURL()
+        let bare = base.appendingPathComponent(path)
         guard let token = secrets.get(SecretKeys.sessionToken),
               let code = try? await api.webHandoff(sessionToken: token),
-              var comps = URLComponents(url: base, resolvingAgainstBaseURL: false) else { return base }
-        comps.queryItems = [.init(name: "handoff", value: code)]
-        return comps.url ?? base
+              var comps = URLComponents(url: base.appendingPathComponent("/auth/handoff"),
+                                        resolvingAgainstBaseURL: false) else { return bare }
+        comps.queryItems = [
+            .init(name: "code", value: code),
+            .init(name: "next", value: path.hasPrefix("/") ? path : "/" + path),
+        ]
+        return comps.url ?? bare
     }
 
     // MARK: cache
