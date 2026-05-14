@@ -31,14 +31,22 @@ final class SettingsStore {
     var startRecordingOnLaunch: Bool {
         didSet { defaults.set(startRecordingOnLaunch, forKey: Keys.startRec) }
     }
+    var topAppsWindow: TopAppsWindow {
+        didSet { defaults.set(topAppsWindow.rawValue, forKey: Keys.topAppsWindow) }
+    }
 
-    private enum Keys { static let runtime = "synthesisRuntime"; static let startRec = "startRecordingOnLaunch" }
+    private enum Keys {
+        static let runtime = "synthesisRuntime"
+        static let startRec = "startRecordingOnLaunch"
+        static let topAppsWindow = "topAppsWindow"
+    }
 
     init(defaults: UserDefaults = .standard, loginItem: LoginItemControlling = SMLoginItem()) {
         self.defaults = defaults
         self.loginItem = loginItem
         self.synthesisRuntime = (defaults.string(forKey: Keys.runtime)).flatMap(SynthesisRuntime.init(rawValue:)) ?? .claudeCode
         self.startRecordingOnLaunch = defaults.object(forKey: Keys.startRec) as? Bool ?? true
+        self.topAppsWindow = (defaults.string(forKey: Keys.topAppsWindow)).flatMap(TopAppsWindow.init(rawValue:)) ?? .today
         AppDelegate.sharedSettings = self
     }
 

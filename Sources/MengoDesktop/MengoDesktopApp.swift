@@ -18,6 +18,7 @@ struct MengoDesktopApp: App {
     @State private var hud: RecordingHUDController
     @State private var hotkeys: HotkeyManager
     @State private var flow: FlowController
+    @State private var memoryDashboard: MemoryDashboardStore
     @Environment(\.openWindow) private var openWindow
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
@@ -29,12 +30,15 @@ struct MengoDesktopApp: App {
         let h = RecordingHUDController()
         let hk = HotkeyManager()
         let fl = FlowController.live(recorder: rec, hud: h, account: acct, settings: st, notify: { AppDelegate.postFlowNotification($0) })
+        let memDB = MemoryDB.live()
+        let dash = MemoryDashboardStore(db: memDB, settings: st)
         _account = State(initialValue: acct)
         _settings = State(initialValue: st)
         _recorder = State(initialValue: rec)
         _hud = State(initialValue: h)
         _hotkeys = State(initialValue: hk)
         _flow = State(initialValue: fl)
+        _memoryDashboard = State(initialValue: dash)
         AppDelegate.sharedHotkeys = hk
     }
 
