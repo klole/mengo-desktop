@@ -34,11 +34,50 @@ final class MemoryDashboardStore {
 
     @ObservationIgnored private let db: MemoryDashboardSource
     @ObservationIgnored private let settings: SettingsStore
+    @ObservationIgnored private let activityStream: ActivityFeedStream
 
-    init(db: MemoryDashboardSource, settings: SettingsStore) {
+    init(db: MemoryDashboardSource, settings: SettingsStore, activityStream: ActivityFeedStream? = nil) {
         self.db = db
         self.settings = settings
+        self.activityStream = activityStream ?? ActivityFeedStream(source: db)
         self.topAppsWindow = settings.topAppsWindow
+    }
+
+    /// View-driven task. Consumes the activity stream and refreshes the
+    /// summary cards on a 60-s cadence. Cancellation propagates via
+    /// `Task.isCancelled` when the view disappears.
+    func task() async {
+        await refresh()
+        // `async let` lets us run the two loops concurrently without the
+        // TaskGroup region-isolation checker tripping on @MainActor closures.
+        async let activity: Void = consumeActivityStream()
+        async let summary: Void  = periodicSummaryRefresh()
+        _ = await (activity, summary)
+    }
+
+    private func consumeActivityStream() async {
+        do {
+            for try await batch in activityStream.events() {
+                // Newest events first. Cap so the list doesn't grow without
+                // bound across long sessions — the view only paints ~12.
+                let merged = batch + recentActivity
+                recentActivity = Array(merged.prefix(100))
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            // Stream internals swallow non-cancellation errors with backoff;
+            // anything that reaches us here means cancellation race — exit.
+            return
+        }
+    }
+
+    private func periodicSummaryRefresh() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(60))
+            if Task.isCancelled { break }
+            await refresh()
+        }
     }
 
     /// Re-pulls `topApps` and `recentSessions` from the DB using the current

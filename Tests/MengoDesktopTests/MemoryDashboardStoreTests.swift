@@ -87,4 +87,52 @@ final class MemoryDashboardStoreTests: XCTestCase {
         let observedWindow = await stub.lastTopAppsWindow
         XCTAssertEqual(observedWindow, TopAppsWindow.last7Days.seconds)
     }
+
+    func test_task_consumesActivityStreamAndPrependsBatches() async throws {
+        let stub = StubDashboardSource()
+        let firstBatch: [ActivityEvent] = [
+            .screenshot(id: 1, at: Date(), appName: "Chrome", windowName: nil),
+            .screenshot(id: 2, at: Date(), appName: "Chrome", windowName: nil),
+        ]
+        await stub.setRecentActivity(firstBatch)
+
+        let stream = ActivityFeedStream(source: stub, interval: .milliseconds(5), backoff: .milliseconds(5))
+        let store = MemoryDashboardStore(db: stub, settings: freshSettings(), activityStream: stream)
+
+        let task = Task { await store.task() }
+        defer { task.cancel() }
+
+        // Wait for the first batch to arrive.
+        try await eventually(timeout: .seconds(1)) { store.recentActivity.count == 2 }
+        XCTAssertEqual(store.recentActivity.map(\.id), ["screenshot-1", "screenshot-2"])
+    }
+
+    func test_task_capsRecentActivityAt100() async throws {
+        let stub = StubDashboardSource()
+        // 150 events in a single batch — only the newest 100 should remain.
+        let many: [ActivityEvent] = (1...150).map { id in
+            .screenshot(id: Int64(id), at: Date(), appName: "Chrome", windowName: nil)
+        }
+        await stub.setRecentActivity(many)
+
+        let stream = ActivityFeedStream(source: stub, interval: .milliseconds(5), backoff: .milliseconds(5))
+        let store = MemoryDashboardStore(db: stub, settings: freshSettings(), activityStream: stream)
+
+        let task = Task { await store.task() }
+        defer { task.cancel() }
+
+        try await eventually(timeout: .seconds(1)) { store.recentActivity.count > 0 }
+        XCTAssertEqual(store.recentActivity.count, 100)
+    }
+
+    // MARK: -
+
+    private func eventually(timeout: Duration, predicate: () -> Bool) async throws {
+        let start = ContinuousClock.now
+        while ContinuousClock.now - start < timeout {
+            if predicate() { return }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTFail("condition not met within \(timeout)")
+    }
 }
