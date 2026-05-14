@@ -26,7 +26,7 @@ final class MemoryDashboardStore {
     private(set) var topApps: [AppUsageRow] = []
     private(set) var recentSessions: [SessionRow] = []
     private(set) var recentActivity: [ActivityEvent] = []
-    private(set) var insights: [String] = []   // typed in D1; placeholder for now
+    private(set) var insights: [Insight] = []
 
     var topAppsWindow: TopAppsWindow {
         didSet { settings.topAppsWindow = topAppsWindow }
@@ -82,13 +82,15 @@ final class MemoryDashboardStore {
 
     /// Re-pulls `topApps` and `recentSessions` from the DB using the current
     /// `topAppsWindow`. Sessions always look at the last 24 h regardless of
-    /// the picker (the picker is a Top Apps concept).
+    /// the picker (the picker is a Top Apps concept). Insights re-run on a
+    /// 24-h frame window too.
     func refresh() async {
         async let topAppsTask = loadTopApps()
-        async let sessionsTask = loadSessions()
-        let (apps, sessions) = await (topAppsTask, sessionsTask)
+        async let framesTask  = load24HourFrames()
+        let (apps, frames) = await (topAppsTask, framesTask)
         self.topApps = apps
-        self.recentSessions = sessions
+        self.recentSessions = SessionsService.cluster(frames)
+        self.insights = InsightsEngine.candidates(from: frames)
     }
 
     /// Updates the persisted window selection and re-runs the Top Apps query.
@@ -108,10 +110,9 @@ final class MemoryDashboardStore {
         }
     }
 
-    private func loadSessions() async -> [SessionRow] {
+    private func load24HourFrames() async -> [FrameRow] {
         do {
-            let frames = try await db.recentFrames(window: 24 * 60 * 60, limit: 1000)
-            return SessionsService.cluster(frames)
+            return try await db.recentFrames(window: 24 * 60 * 60, limit: 1000)
         } catch {
             return []
         }
