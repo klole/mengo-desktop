@@ -17,7 +17,7 @@ struct MemoryDashboardPane: View {
 
     @State private var showAdvancedSources = false
     @State private var showScheduleStub = false
-    @State private var importPanel: NSOpenPanel?
+    @State private var listSheet: MemoryListPage.Kind?
 
     private let narrowBreakpoint: CGFloat = 1100
 
@@ -31,12 +31,14 @@ struct MemoryDashboardPane: View {
                         settings: settings,
                         onSchedule: { showScheduleStub = true },
                         onShowAdvancedSources: { showAdvancedSources = true },
-                        onShowSettings: { /* C3 will route to .settings */ }
+                        onShowSettings: { appState.selectedSection = .settings }
                     )
                     InsightsCarouselPlaceholder()
                     HStack(alignment: .top, spacing: 22) {
-                        RecentSessionsCard(store: store).frame(maxWidth: .infinity)
-                        TopApplicationsCard(store: store).frame(maxWidth: .infinity)
+                        RecentSessionsCard(store: store, onViewAll: { listSheet = .sessions })
+                            .frame(maxWidth: .infinity)
+                        TopApplicationsCard(store: store, onViewAll: { listSheet = .applications })
+                            .frame(maxWidth: .infinity)
                     }
                     QuickActionsRow(
                         onConfigureSources: { showAdvancedSources = true },
@@ -46,14 +48,15 @@ struct MemoryDashboardPane: View {
                         onImportWorkflow:   { importWorkflow() }
                     )
                     if !useRail {
-                        ActivityFeedView(store: store)   // tucks below the middle column
+                        ActivityFeedView(store: store, onViewAll: { listSheet = .activity })
                     }
                 }
 
                 HStack(alignment: .top, spacing: 22) {
                     body
                     if useRail {
-                        ActivityFeedView(store: store).frame(width: 300)
+                        ActivityFeedView(store: store, onViewAll: { listSheet = .activity })
+                            .frame(width: 300)
                     }
                 }
                 .padding(28)
@@ -66,6 +69,9 @@ struct MemoryDashboardPane: View {
         )
         .sheet(isPresented: $showAdvancedSources) {
             RecordingSourcesView(recorder: recorder)
+        }
+        .sheet(item: $listSheet) { kind in
+            MemoryListPage(kind: kind, store: store, onClose: { listSheet = nil })
         }
         .alert("Schedule Recording", isPresented: $showScheduleStub) {
             Button("OK", role: .cancel) {}
