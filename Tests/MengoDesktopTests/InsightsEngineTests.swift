@@ -141,8 +141,8 @@ final class InsightsEngineTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
 
         let original = sampleInsights()
-        InsightsEngine.saveCache(original, runtimeID: "claudeCode", to: url, now: Date())
-        let loaded = InsightsEngine.loadCache(from: url, maxAge: 60, now: Date())
+        InsightsEngine.saveCache(original, runtimeID: "claudeCode", aiPolished: false, to: url, now: Date())
+        let loaded = InsightsEngine.loadCache(from: url, maxAge: 60, aiInsightsEnabled: false, now: Date())
         XCTAssertEqual(loaded, original)
     }
 
@@ -152,11 +152,27 @@ final class InsightsEngineTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
 
         let writeTime = Date(timeIntervalSince1970: 1_000_000)
-        InsightsEngine.saveCache(sampleInsights(), runtimeID: "claudeCode", to: url, now: writeTime)
+        InsightsEngine.saveCache(sampleInsights(), runtimeID: "claudeCode", aiPolished: false, to: url, now: writeTime)
         // Read time 700s later; maxAge = 600s → expired.
         let readTime = writeTime.addingTimeInterval(700)
-        let loaded = InsightsEngine.loadCache(from: url, maxAge: 600, now: readTime)
+        let loaded = InsightsEngine.loadCache(from: url, maxAge: 600, aiInsightsEnabled: false, now: readTime)
         XCTAssertNil(loaded)
+    }
+
+    func test_cache_invalidatedWhenAIToggleChanges() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("insights-test-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        // Write with AI-polished cache.
+        InsightsEngine.saveCache(sampleInsights(), runtimeID: "claudeCode", aiPolished: true, to: url, now: Date())
+        // User has since toggled AI off → cache should be invalidated.
+        let loaded = InsightsEngine.loadCache(from: url, maxAge: 600, aiInsightsEnabled: false, now: Date())
+        XCTAssertNil(loaded, "Cache written with AI-polished content should not be served when the toggle is off")
+        // Symmetric case: cache written without AI; user toggled AI on.
+        InsightsEngine.saveCache(sampleInsights(), runtimeID: "claudeCode", aiPolished: false, to: url, now: Date())
+        let loaded2 = InsightsEngine.loadCache(from: url, maxAge: 600, aiInsightsEnabled: true, now: Date())
+        XCTAssertNil(loaded2, "Cache written without AI polish should not be served when the toggle is on")
     }
 
     // MARK: -

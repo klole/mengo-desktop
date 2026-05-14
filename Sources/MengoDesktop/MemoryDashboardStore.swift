@@ -107,20 +107,26 @@ final class MemoryDashboardStore {
         self.topApps = apps
         self.recentSessions = SessionsService.cluster(frames)
 
-        // Insights: serve from cache if fresh; otherwise compute Pass 1 +
-        // optional Pass 2, then write the cache.
-        if let cached = InsightsEngine.loadCache() {
+        // Insights: serve from cache if fresh AND its polish-state still
+        // matches the user's current toggle; otherwise compute Pass 1 +
+        // optional Pass 2 and write the cache.
+        let aiEnabled = settings.aiInsightsEnabled
+        if let cached = InsightsEngine.loadCache(aiInsightsEnabled: aiEnabled) {
             self.insights = cached
             return
         }
         let heuristics = InsightsEngine.candidates(from: frames)
         let polished = await InsightsEngine.polish(
             heuristics,
-            enabled: settings.aiInsightsEnabled,
+            enabled: aiEnabled,
             polisher: insightsPolisher
         )
         self.insights = polished
-        InsightsEngine.saveCache(polished, runtimeID: settings.synthesisRuntime.rawValue)
+        InsightsEngine.saveCache(
+            polished,
+            runtimeID: settings.synthesisRuntime.rawValue,
+            aiPolished: aiEnabled
+        )
     }
 
     /// Updates the persisted window selection and re-runs the Top Apps query.

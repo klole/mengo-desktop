@@ -147,20 +147,30 @@ enum RecordingScheduleRule: Equatable, Codable, Sendable, Identifiable {
         }
     }
 
-    /// True when `date` falls inside the rule's window.
+    /// True when `date` falls inside the rule's window. Wrap-midnight rules
+    /// (e.g. `Sun 22:00 → 06:00`) are active *into* the next weekday's
+    /// morning — at Monday 03:00 we still consider the Sunday rule active.
     func contains(_ date: Date, calendar: Calendar = .current) -> Bool {
         switch self {
         case .recurring(_, let days, let start, let end):
             let comps = calendar.dateComponents([.weekday, .hour, .minute], from: date)
             guard let wd = comps.weekday, let h = comps.hour, let m = comps.minute,
                   let weekday = Weekday(rawValue: wd) else { return false }
-            guard days.contains(weekday) else { return false }
             let now = h * 60 + m
             let s = start.minutesSinceMidnight
             let e = end.minutesSinceMidnight
-            if s <= e { return now >= s && now < e }
-            // Wraps midnight (e.g. 22:00 → 06:00).
-            return now >= s || now < e
+            if s <= e {
+                return days.contains(weekday) && now >= s && now < e
+            }
+            // Wraps midnight: today's weekday + time-after-start is one match;
+            // *yesterday's* weekday + time-before-end is the other (we're in
+            // the morning-after half of yesterday's rule).
+            if days.contains(weekday) && now >= s { return true }
+            let prevRaw = ((wd - 2 + 7) % 7) + 1   // sun(1)→sat(7); mon(2)→sun(1); …
+            if let prev = Weekday(rawValue: prevRaw), days.contains(prev), now < e {
+                return true
+            }
+            return false
         case .oneOff(_, let start, let end):
             return date >= start && date < end
         }

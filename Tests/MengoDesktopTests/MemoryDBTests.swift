@@ -105,6 +105,17 @@ final class MemoryDBTests: XCTestCase {
         XCTAssertEqual(Set(transcriptionIDs), [4])
     }
 
+    func test_recentActivity_capsTotalReturnAtLimit() async throws {
+        let db = MemoryDB(dbURL: fixtureURL)
+        // Fixture has 27 mergeable events. Requesting 10 should yield exactly 10.
+        let events = try await db.recentActivity(sinceFrameID: 0, sinceAudioID: 0, limit: 10)
+        XCTAssertEqual(events.count, 10)
+        // And they should be the newest 10 by timestamp.
+        for i in 1..<events.count {
+            XCTAssertGreaterThanOrEqual(events[i - 1].timestamp, events[i].timestamp)
+        }
+    }
+
     func test_recentActivity_includesURLVisitedWhenBrowserURLPresent() async throws {
         let db = MemoryDB(dbURL: fixtureURL)
         let events = try await db.recentActivity(sinceFrameID: 0, sinceAudioID: 0, limit: 100)

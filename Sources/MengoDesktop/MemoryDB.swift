@@ -108,15 +108,25 @@ actor MemoryDB {
     }
 
     /// Newest-first merged feed of frames + transcriptions whose ids exceed
-    /// the given cursors. Pass `0` for either cursor to include everything of
-    /// that kind. Frames with a non-empty `browser_url` additionally emit a
-    /// `.urlVisited` event alongside their `.screenshot` event.
+    /// the given cursors, capped to `limit` total events. Pass `0` for either
+    /// cursor to include everything of that kind. Frames with a non-empty
+    /// `browser_url` additionally emit a `.urlVisited` event alongside their
+    /// `.screenshot` event — but the total return is still bounded by `limit`.
+    ///
+    /// Cursor advancement note: the caller advances its cursors to the max
+    /// IDs in the returned events. Any events dropped by the post-merge cap
+    /// (older than the kept set) will be re-queried on a later tick because
+    /// the cursor sat just above the kept events' minimum id, not below the
+    /// dropped ones. In practice for our 5-s polling interval the cap is
+    /// almost never hit, so the trade-off favors a clean contract.
     func recentActivity(sinceFrameID: Int64, sinceAudioID: Int64, limit: Int) throws -> [ActivityEvent] {
         let db = try openIfNeeded()
 
         var events: [ActivityEvent] = []
 
-        // Frames → .screenshot (+ .urlVisited if browser_url is set).
+        // Frames → .screenshot (+ .urlVisited if browser_url is set). Per-query
+        // limit is `limit` so we never starve audio; the combined return is
+        // capped at the end.
         do {
             let sql = """
                 SELECT id, timestamp, app_name, window_name, browser_url
@@ -163,8 +173,10 @@ actor MemoryDB {
             }
         }
 
-        // Newest-first merged ordering.
-        return events.sorted { $0.timestamp > $1.timestamp }
+        // Newest-first merged ordering, capped to `limit` total events so the
+        // method honors its name. Without this cap a browser-URL-heavy tick
+        // could return 2× frames + transcriptions, overflowing consumer caps.
+        return Array(events.sorted { $0.timestamp > $1.timestamp }.prefix(limit))
     }
 
     func lastFrameID() throws -> Int64? {

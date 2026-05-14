@@ -59,6 +59,7 @@ enum InsightsEngine {
     struct Cache: Codable, Equatable, Sendable {
         let generatedAt: Date
         let runtimeID: String
+        let aiPolished: Bool   // tracks whether Pass 2 ran when the cache was written
         let insights: [Insight]
     }
 
@@ -69,20 +70,35 @@ enum InsightsEngine {
             .appendingPathComponent("insights-cache.json")
     }
 
-    /// Returns the cached insights if the file exists and was written within
-    /// `maxAge` seconds. Otherwise returns nil (no error — refresh fall-through).
-    static func loadCache(from url: URL = defaultCacheURL, maxAge: TimeInterval = 600, now: Date = Date()) -> [Insight]? {
+    /// Returns the cached insights if the file exists, was written within
+    /// `maxAge` seconds, AND its polish-state matches the caller's current
+    /// `aiInsightsEnabled` setting. Toggling AI off (or on) invalidates a
+    /// mismatched cache immediately rather than waiting for TTL expiry.
+    static func loadCache(
+        from url: URL = defaultCacheURL,
+        maxAge: TimeInterval = 600,
+        aiInsightsEnabled: Bool,
+        now: Date = Date()
+    ) -> [Insight]? {
         guard let data = try? Data(contentsOf: url),
               let cache = try? JSONDecoder.iso8601.decode(Cache.self, from: data),
-              now.timeIntervalSince(cache.generatedAt) < maxAge
+              now.timeIntervalSince(cache.generatedAt) < maxAge,
+              cache.aiPolished == aiInsightsEnabled
         else { return nil }
         return cache.insights
     }
 
-    /// Persists the (polished) insights so the next launch / pane navigation
-    /// doesn't re-trigger the LLM call inside the 10-min window.
-    static func saveCache(_ insights: [Insight], runtimeID: String, to url: URL = defaultCacheURL, now: Date = Date()) {
-        let cache = Cache(generatedAt: now, runtimeID: runtimeID, insights: insights)
+    /// Persists the insights so the next refresh inside the TTL doesn't
+    /// re-trigger the LLM call. `aiPolished` records whether Pass 2 ran, so
+    /// a subsequent toggle of `aiInsightsEnabled` invalidates the cache.
+    static func saveCache(
+        _ insights: [Insight],
+        runtimeID: String,
+        aiPolished: Bool,
+        to url: URL = defaultCacheURL,
+        now: Date = Date()
+    ) {
+        let cache = Cache(generatedAt: now, runtimeID: runtimeID, aiPolished: aiPolished, insights: insights)
         guard let data = try? JSONEncoder.iso8601.encode(cache) else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: url, options: .atomic)
