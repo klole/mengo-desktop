@@ -68,6 +68,41 @@ enum ActivityEvent: Equatable, Sendable, Identifiable {
     }
 }
 
+/// Capture mode for the recorder. Drives the `--fps` flag handed to the
+/// recorder process on start; persisted in `SettingsStore.captureMode`. The
+/// numbers below are conservative defaults — tune once we've validated them
+/// against the bundled recorder build.
+enum CaptureMode: String, CaseIterable, Sendable, Codable {
+    case smartCapture   // change-detected captures, low constant cost
+    case allChanges     // capture every change at a higher rate
+    case periodic       // slow steady cadence
+
+    var displayName: String {
+        switch self {
+        case .smartCapture: return "Smart Capture"
+        case .allChanges:   return "Changes only"
+        case .periodic:     return "Periodic"
+        }
+    }
+
+    var caption: String {
+        switch self {
+        case .smartCapture: return "1 fps, change-detected (default)"
+        case .allChanges:   return "2 fps, every visible change"
+        case .periodic:     return "0.5 fps, steady cadence"
+        }
+    }
+
+    /// CLI flags appended to the recorder invocation for this mode.
+    var recorderFlags: [String] {
+        switch self {
+        case .smartCapture: return ["--fps", "1.0"]
+        case .allChanges:   return ["--fps", "2.0"]
+        case .periodic:     return ["--fps", "0.5"]
+        }
+    }
+}
+
 /// Selector for `MemoryDashboardStore.topAppsWindow`. Stored in `SettingsStore`
 /// so the last choice survives launches.
 enum TopAppsWindow: String, CaseIterable, Sendable, Codable {

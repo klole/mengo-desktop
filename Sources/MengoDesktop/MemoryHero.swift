@@ -11,6 +11,7 @@ import SwiftUI
 ///      Schedule Recording buttons.
 struct MemoryHero: View {
     let recorder: RecorderController
+    let settings: SettingsStore
     var onSchedule: () -> Void = {}
     var onShowAdvancedSources: () -> Void = {}
     var onShowSettings: () -> Void = {}
@@ -200,18 +201,30 @@ struct MemoryHero: View {
     }
 
     @ViewBuilder private var captureModePill: some View {
-        // Capture mode itself ships in B3; placeholder menu shows the three
-        // modes so the surface is in the layout from day one.
         Menu {
-            Label("Smart Capture", systemImage: "checkmark")
-            Text("Changes only").foregroundStyle(.secondary)
-            Text("Periodic").foregroundStyle(.secondary)
+            ForEach(CaptureMode.allCases, id: \.self) { mode in
+                Button {
+                    settings.captureMode = mode
+                    // Restart the recorder if it's currently running so the new
+                    // --fps takes effect immediately. (applyRecordingSources
+                    // rebuilds args + restarts in one shot.)
+                    if recorder.status.isRecording {
+                        Task { await recorder.applyRecordingSources() }
+                    }
+                } label: {
+                    if settings.captureMode == mode {
+                        Label(mode.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(mode.displayName)
+                    }
+                }
+            }
         } label: {
             pillContent(
                 icon: "camera",
                 title: "Capture mode",
-                value: "Smart Capture",
-                detail: "Changes only"
+                value: settings.captureMode.displayName,
+                detail: settings.captureMode.caption
             )
         }
         .menuStyle(.borderlessButton)

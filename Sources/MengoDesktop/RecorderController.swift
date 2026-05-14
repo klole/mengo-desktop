@@ -38,6 +38,8 @@ final class RecorderController {
     @ObservationIgnored private var audioPaused = false
     @ObservationIgnored private var screenPaused = false
 
+    @ObservationIgnored private let captureModeProvider: @MainActor () -> CaptureMode
+
     init(
         processFactory: (String) -> RecorderProcessControlling = { RecorderProcess(token: $0) },
         apiFactory: (String) -> RecorderHealthAPI = { APIClient(token: $0) },
@@ -45,7 +47,8 @@ final class RecorderController {
         requestPermissions: @escaping () async -> Void = RecorderController.requestSystemPermissions,
         pollInterval: Duration = .seconds(5),
         sourcesStore: RecordingSourcesStore = RecordingSourcesStore(),
-        sourceCatalog: RecordingSourceCatalog = RecorderCLICatalog()
+        sourceCatalog: RecordingSourceCatalog = RecorderCLICatalog(),
+        captureModeProvider: @escaping @MainActor () -> CaptureMode = { .smartCapture }
     ) {
         let token = RecorderProcess.newToken()
         self.recorderToken = token
@@ -56,6 +59,7 @@ final class RecorderController {
         self.pollInterval = pollInterval
         self.sourcesStore = sourcesStore
         self.sourceCatalog = sourceCatalog
+        self.captureModeProvider = captureModeProvider
         AppDelegate.sharedRecorder = self   // V1's bridge for the AppDelegate hooks
     }
 
@@ -203,6 +207,10 @@ final class RecorderController {
             if audioNames.isEmpty { args.append("--disable-audio"); audioDisabled = true }
             else { for name in audioNames { args += ["--audio-device", name] } }
         }
+
+        // Capture-mode flags (--fps + variants). Comes from SettingsStore in
+        // production; defaults to .smartCapture in tests that don't wire it.
+        args += captureModeProvider().recorderFlags
 
         return (args, resolvedMonitorIDs, audioNames, audioDisabled)
     }

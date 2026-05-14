@@ -26,7 +26,7 @@ struct MengoDesktopApp: App {
         Log.bootstrap()
         let acct = AccountStore()
         let st = SettingsStore()
-        let rec = RecorderController()
+        let rec = RecorderController(captureModeProvider: { [weak st] in st?.captureMode ?? .smartCapture })
         let h = RecordingHUDController()
         let hk = HotkeyManager()
         let fl = FlowController.live(recorder: rec, hud: h, account: acct, settings: st, notify: { AppDelegate.postFlowNotification($0) })

@@ -34,11 +34,15 @@ final class SettingsStore {
     var topAppsWindow: TopAppsWindow {
         didSet { defaults.set(topAppsWindow.rawValue, forKey: Keys.topAppsWindow) }
     }
+    var captureMode: CaptureMode {
+        didSet { defaults.set(captureMode.rawValue, forKey: Keys.captureMode) }
+    }
 
     private enum Keys {
         static let runtime = "synthesisRuntime"
         static let startRec = "startRecordingOnLaunch"
         static let topAppsWindow = "topAppsWindow"
+        static let captureMode = "captureMode"
     }
 
     init(defaults: UserDefaults = .standard, loginItem: LoginItemControlling = SMLoginItem()) {
@@ -47,6 +51,7 @@ final class SettingsStore {
         self.synthesisRuntime = (defaults.string(forKey: Keys.runtime)).flatMap(SynthesisRuntime.init(rawValue:)) ?? .claudeCode
         self.startRecordingOnLaunch = defaults.object(forKey: Keys.startRec) as? Bool ?? true
         self.topAppsWindow = (defaults.string(forKey: Keys.topAppsWindow)).flatMap(TopAppsWindow.init(rawValue:)) ?? .today
+        self.captureMode = (defaults.string(forKey: Keys.captureMode)).flatMap(CaptureMode.init(rawValue:)) ?? .smartCapture
         AppDelegate.sharedSettings = self
     }
 
