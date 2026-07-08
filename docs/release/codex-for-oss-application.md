@@ -30,7 +30,8 @@ Mengo is early, but it is directly aligned with Codex maintainer workflows: it h
 - Current fork count: 0 as of 2026-07-08.
 - Current release tag: existing `v1.0.0` release is pre-cleanup and should not be used as the Mengo Desktop V1 evidence; a draft `v0.1.0-preview` prerelease is prepared but not published.
 - Release download count: 0 on the draft `MengoDesktop-macos-arm64.zip` asset; fill again after publication.
-- CI status: macOS `build-test` passes on draft PR #8 after the V1 readiness fixes; re-check immediately before applying.
+- Draft asset checksum: `sha256:3fcde87a7f51509e7e9ca84c4bb98a0565f8d3f0be2b9ff984ab24bc879b5a84`.
+- CI status: macOS `build-test` passes on draft PR #8 at branch head `ff50dc5`.
 - Draft PR: https://github.com/klole/mengo-desktop/pull/8
 - Draft release: https://github.com/klole/mengo-desktop/releases/tag/untagged-1364ef715b4b6741d7dd
 - Demo video/GIF: `docs/assets/mengo-desktop-preview.gif` exists; replace with a real record-to-skill walkthrough after the full app smoke passes.
