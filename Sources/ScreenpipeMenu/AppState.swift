@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import CoreGraphics
 import AVFoundation
-import ScreenCaptureKit
+@preconcurrency import ScreenCaptureKit
 
 @Observable
 @MainActor
