@@ -32,7 +32,7 @@ Mengo is early, but it is directly aligned with Codex maintainer workflows: it h
 - Release download count: fill after the new release is published.
 - CI status: macOS `build-test` passes on draft PR #8 after the V1 readiness fixes; re-check immediately before applying.
 - Draft PR: https://github.com/klole/mengo-desktop/pull/8
-- Demo video/GIF: still needed.
+- Demo video/GIF: `docs/assets/mengo-desktop-preview.gif` exists; replace with a real record-to-skill walkthrough after the full app smoke passes.
 - Codex runtime smoke result: scripted CLI/MCP/final-message smoke passed locally with `codex-cli 0.143.0`; full app record-to-skill smoke still needed.
 - Notarization status: notarization path is scripted, but a Developer ID Application certificate and notarytool profile are still required.
 

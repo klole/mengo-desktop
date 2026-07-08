@@ -10,6 +10,8 @@ Mengo is early V1 software. The core goal for this release is a reliable local l
 4. synthesize a skill with Codex or Claude Code,
 5. review, edit, save, and reuse that skill.
 
+![Mengo Desktop preview](docs/assets/mengo-desktop-preview.gif)
+
 ## Status
 
 Mengo Desktop is preparing for its first clean OSS V1 release. The app builds and the MengoDesktop test suite passes locally, but the public release checklist is still in progress. See [docs/release/mengo-desktop-v1-release-plan.md](docs/release/mengo-desktop-v1-release-plan.md) for the current release plan.
