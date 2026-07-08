@@ -60,3 +60,15 @@ Do not publish the preview release until:
 - `spctl --assess --type execute -vv MengoDesktop.app` result is documented.
 - `docs/release/v0.1.0-preview.md` checksum is regenerated from the final zip.
 - Manual smoke test status is recorded in `docs/manual-smoke-tests/mengo-v1.md`.
+
+## Current Pull Request
+
+- Draft PR: https://github.com/klole/mengo-desktop/pull/8
+- Branch: `v1-release-readiness`
+- CI status after the resource/concurrency fixes: passing macOS `build-test`.
+
+## Signing Status
+
+- Local ad-hoc packaging path works through `./build-mengo.sh`.
+- Release notarization path is scripted in `scripts/notarize-mengo.sh`.
+- Current local keychain has an Apple Development identity only; a Developer ID Application certificate and notarytool profile are still required before a notarized V1 can be published.

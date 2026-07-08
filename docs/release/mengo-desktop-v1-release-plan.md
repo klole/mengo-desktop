@@ -29,6 +29,11 @@ Completed or improved:
 - Changed release packaging to produce an architecture-specific `MengoDesktop-macos-arm64.zip` on this machine instead of falsely implying a universal helper.
 - Added first-class local preview mode so OSS users can run without hosted account endpoints.
 - Updated public GitHub description/topics and opened V1 roadmap issues #1-#7.
+- Opened draft PR: https://github.com/klole/mengo-desktop/pull/8
+- Fixed legacy ScreenpipeMenu CI build compatibility on Xcode 16.4.
+- Moved the ScreenpipeFlow synthesis prompt into a target-local SwiftPM resource path while keeping the app-bundle resource for Mengo Desktop packaging.
+- Fixed Swift 6 XCTest actor-isolation issues in legacy manifest writer tests.
+- Added `scripts/notarize-mengo.sh` and `MENGO_SIGN_FOR_NOTARIZATION=1` packaging support for Developer ID hardened-runtime signing plus Apple notarization.
 
 Current verification:
 
@@ -37,16 +42,17 @@ Current verification:
 - `codesign --verify --deep --strict --verbose=2 MengoDesktop.app` passed.
 - `MengoDesktop.app/Contents/MacOS/MengoDesktop` and `Contents/Helpers/screenpipe` both report `arm64` in the latest local artifact.
 - `spctl --assess --type execute -vv MengoDesktop.app` still rejects the app because the build is ad-hoc/self-signed and not notarized.
+- GitHub Actions macOS `build-test` passes on the V1 readiness PR.
+- Current local keychain has an Apple Development signing identity only; Developer ID Application certificate and notarytool credentials are still required to complete notarization.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.
 
 Still open:
 
 - Developer ID signing and notarization.
-- PR workflow setup after pushing this branch.
 - Hosted account strategy beyond local preview mode.
 - Codex runtime manual smoke test.
 - Manual app smoke matrix on a clean user account.
-- Legacy target strategy: keep, move, or remove ScreenpipeMenu/ScreenpipeFlow from default package.
+- Legacy target strategy after V1: keep legacy targets in the package for the preview because full CI is now green, then move or remove if they continue to create maintenance noise.
 
 The relevant application signals are:
 

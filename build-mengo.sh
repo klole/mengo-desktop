@@ -81,7 +81,7 @@ fi
 # grants survive; the bundled helper inherits them), else ad-hoc. The helper gets
 # the SAME identifier as the .app so macOS treats it as part of Mengo Desktop.
 CERT_NAME="${MENGO_SIGNING_IDENTITY:-Mengo Desktop Local Dev}"
-CERT_LINE=$(security find-identity -p basic login.keychain 2>/dev/null | grep "$CERT_NAME" || true)
+CERT_LINE=$(security find-identity -v -p codesigning 2>/dev/null | grep -F "$CERT_NAME" || true)
 CERT_SHA=$(echo "$CERT_LINE" | awk '{print $2}' | head -1)
 if [ -n "$CERT_SHA" ]; then
     SIGN_IDENTITY="$CERT_SHA"
@@ -95,9 +95,18 @@ fi
 xattr -cr "$APP_BUNDLE" 2>/dev/null || true
 
 codesign --remove-signature "$APP_BUNDLE/Contents/Helpers/screenpipe" 2>/dev/null || true
-codesign --sign "$SIGN_IDENTITY" --force "$APP_BUNDLE/Contents/Helpers/mlx.metallib"
-codesign --sign "$SIGN_IDENTITY" --force --identifier "$BUNDLE_ID" "$APP_BUNDLE/Contents/Helpers/screenpipe"
-codesign --sign "$SIGN_IDENTITY" --force --identifier "$BUNDLE_ID" "$APP_BUNDLE"
+SIGN_FLAGS=(--sign "$SIGN_IDENTITY" --force)
+if [ "${MENGO_SIGN_FOR_NOTARIZATION:-0}" = "1" ]; then
+    if [ "$SIGN_IDENTITY" = "-" ]; then
+        echo "ERROR: MENGO_SIGN_FOR_NOTARIZATION=1 requires a Developer ID signing identity"
+        exit 1
+    fi
+    SIGN_FLAGS+=(--options runtime --timestamp)
+fi
+
+codesign "${SIGN_FLAGS[@]}" "$APP_BUNDLE/Contents/Helpers/mlx.metallib"
+codesign "${SIGN_FLAGS[@]}" --identifier "$BUNDLE_ID" "$APP_BUNDLE/Contents/Helpers/screenpipe"
+codesign "${SIGN_FLAGS[@]}" --identifier "$BUNDLE_ID" "$APP_BUNDLE"
 
 echo "==> Zipping for distribution"
 ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$ZIP_OUT"

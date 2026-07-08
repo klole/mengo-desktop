@@ -31,6 +31,7 @@ Mengo is early, but it is directly aligned with Codex maintainer workflows: it h
 - Current release tag:
 - Release download count:
 - CI status:
+- Draft PR:
 - Demo video/GIF:
 - Codex runtime smoke result:
 - Notarization status:
