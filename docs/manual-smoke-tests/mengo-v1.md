@@ -49,7 +49,8 @@ Run this checklist before publishing a V1 or V1-preview release.
 - [x] Scripted preflight: `codex exec ... --output-last-message <file>` writes the final JSON line Mengo parses.
 - [x] Select Codex in Settings.
 - [x] Confirm preflight detects the Codex executable.
-- [x] Complete record -> synthesize -> review -> save. Local smoke created `~/.claude/skills/record-mengo-flow-skill/` and persisted the library path to that slug directory.
+- [x] Complete record -> synthesize -> review. Local smoke created `~/.claude/skills/record-mengo-flow-skill/` and persisted the library path to that slug directory.
+- [ ] Save from the Codex review screen and confirm the UI exits review after saving.
 - [ ] Break Codex setup and confirm the error mentions Codex.
 
 Repeat the scripted preflight with:
