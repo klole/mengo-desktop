@@ -4,16 +4,19 @@ import XCTest
 @MainActor
 final class ManifestWriterTests: XCTestCase {
 
-    var tmpDir: URL!
+    nonisolated(unsafe) var tmpDir: URL!
 
-    override func setUpWithError() throws {
+    override nonisolated func setUpWithError() throws {
         tmpDir = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("manifest-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
     }
 
-    override func tearDownWithError() throws {
-        try? FileManager.default.removeItem(at: tmpDir)
+    override nonisolated func tearDownWithError() throws {
+        if let tmpDir {
+            try? FileManager.default.removeItem(at: tmpDir)
+        }
+        tmpDir = nil
     }
 
     func testProactiveManifestStructure() throws {
