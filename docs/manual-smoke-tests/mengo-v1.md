@@ -4,6 +4,7 @@ Run this checklist before publishing a V1 or V1-preview release.
 
 ## Fresh Install
 
+- [x] Scripted clean-home check: `HOME=$(mktemp -d) swift test` passes with 186 tests, 0 failures.
 - [ ] Download the release zip.
 - [ ] Verify checksum if one is published.
 - [ ] Unzip `MengoDesktop.app`.
