@@ -35,6 +35,7 @@ Completed or improved:
 - Fixed Swift 6 XCTest actor-isolation issues in legacy manifest writer tests.
 - Added `scripts/notarize-mengo.sh` and `MENGO_SIGN_FOR_NOTARIZATION=1` packaging support for Developer ID hardened-runtime signing plus Apple notarization.
 - Added `scripts/smoke-codex-runtime.sh` for repeatable Codex CLI/MCP/final-message smoke testing.
+- Verified `@screenpipe/cli-darwin-x64` package availability in npm, but documented the preview release as Apple Silicon-only until an Intel-built artifact is smoke-tested on Intel hardware.
 
 Current verification:
 
@@ -47,6 +48,7 @@ Current verification:
 - Current local keychain has an Apple Development signing identity only; Developer ID Application certificate and notarytool credentials are still required to complete notarization.
 - Codex CLI scripted preflight passes locally after adding `screenpipe` MCP: `codex-cli 0.143.0`, `codex mcp list` includes `screenpipe`, and `codex exec --output-last-message` writes the final JSON line Mengo parses.
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
+- Architecture support status: `build-mengo.sh` supports host-specific `arm64` and `x86_64` packaging; the current local artifact and preview notes are Apple Silicon-only because Intel hardware smoke is still missing.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.
 
 Still open:

@@ -18,13 +18,13 @@ Known V1 gaps:
 
 - Developer ID notarization is not finished; local builds are signed for development.
 - Hosted Mengo account endpoints are optional in OSS preview builds; use local preview mode to run the app without a hosted account.
-- Codex runtime support is present in the app and must be smoke-tested before it is advertised as the default path.
+- Codex runtime support is present and has a scripted CLI/MCP smoke check; the full in-app record-to-skill path still needs manual smoke testing before it is advertised as the default path.
 - Legacy ScreenpipeMenu and ScreenpipeFlow targets still exist in the repository while the V1 package is being cleaned up.
 
 ## Requirements
 
 - macOS 15 Sequoia or later
-- Apple Silicon for the current prebuilt helper path
+- Apple Silicon for the current published preview artifact
 - Xcode 16+ / Swift 6 when building from source
 - A supported synthesis runtime:
   - Codex CLI, when using the Codex runtime
@@ -68,16 +68,16 @@ MENGO_PREVIEW_ACCOUNT=free swift run MengoDesktop
 
 ```bash
 ./bootstrap-cert.sh   # optional: creates a stable local development signing identity
-./build-mengo.sh      # produces MengoDesktop.app and MengoDesktop.zip
+./build-mengo.sh      # produces MengoDesktop.app and MengoDesktop-macos-$(uname -m).zip
 ```
 
 For tests:
 
 ```bash
-swift test --filter MengoDesktopTests
+swift test
 ```
 
-The full `swift test` target is expected to become green before V1; legacy target cleanup is tracked in the release plan.
+The preview zip is host-architecture-specific because the bundled screenpipe helper is distributed per architecture. The current published preview artifact is Apple Silicon (`MengoDesktop-macos-arm64.zip`). The x86_64 helper package exists upstream, and `build-mengo.sh` will select it on an Intel Mac, but Intel packaging remains unverified until it is built and smoke-tested on Intel hardware.
 
 ## Runtime Setup
 
@@ -92,8 +92,16 @@ claude mcp add screenpipe -s user -- npx -y screenpipe-mcp
 For Codex:
 
 - Install the Codex CLI.
+- Run `codex mcp add screenpipe -- npx -y screenpipe-mcp`.
 - Select Codex in Mengo Settings.
 - Complete the runtime preflight shown by the app.
+
+Scripted Codex preflight:
+
+```bash
+scripts/smoke-codex-runtime.sh
+MENGO_CODEX_SMOKE_RUN_MODEL=1 scripts/smoke-codex-runtime.sh
+```
 
 The runtime receives the synthesis prompt and access to local screenpipe context through the configured MCP path. Review the generated skill before saving it.
 
@@ -143,7 +151,7 @@ Build fails:
 
 - Confirm Xcode 16+ is selected with `xcode-select -p`.
 - Run `swift --version` and confirm Swift 6+.
-- Remove stale local artifacts with `rm -rf .build MengoDesktop.app MengoDesktop.zip`.
+- Remove stale local artifacts with `rm -rf .build MengoDesktop.app MengoDesktop-macos-*.zip`.
 
 ## Contributing
 
