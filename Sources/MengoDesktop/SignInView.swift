@@ -32,13 +32,17 @@ struct SignInView: View {
     @ViewBuilder private var content: some View {
         switch account.state {
         case .signedOut:
-            Text("Mengo Desktop needs a free Mengo account. Enter your email and we'll send you a sign-in link.")
+            Text("Hosted Mengo accounts are optional in this OSS preview. Sign in if you have an account, or continue locally to try Memory and Flow on this Mac.")
                 .font(Theme.body).foregroundStyle(Theme.secondaryText).multilineTextAlignment(.center)
             TextField("you@example.com", text: $email)
                 .textFieldStyle(.roundedBorder).focused($emailFocused)
                 .onSubmit { if emailLooksValid { Task { await account.sendMagicLink(email: email) } } }
             Button("Email me a link") { Task { await account.sendMagicLink(email: email) } }
                 .buttonStyle(.borderedProminent).tint(Theme.accent).disabled(!emailLooksValid)
+            Button("Continue in local preview") { account.startLocalPreview(plan: .pro) }
+                .buttonStyle(.bordered)
+            Text("Local preview stores recordings and generated skills on this Mac. Hosted billing and account management are disabled.")
+                .font(Theme.caption).foregroundStyle(Theme.mutedText).multilineTextAlignment(.center)
         case .awaitingLink(let sent):
             Text("Check your inbox").font(Theme.headline).foregroundStyle(Theme.primaryText)
             Text("We sent a sign-in link to \(sent). Click it on this Mac to finish signing in.")

@@ -5,7 +5,6 @@ APP_NAME="MengoDesktop"
 BUNDLE_ID="ai.mengo.desktop"
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_BUNDLE="$PROJECT_DIR/$APP_NAME.app"
-ZIP_OUT="$PROJECT_DIR/$APP_NAME.zip"
 ICON_SRC="$PROJECT_DIR/Resources/AppIcon.png"
 CACHE_DIR="$PROJECT_DIR/.build-cache"
 
@@ -18,6 +17,7 @@ case "$HOST_ARCH" in
     x86_64) SP_ARCH="x64" ;;
     *) echo "unsupported arch: $HOST_ARCH"; exit 1 ;;
 esac
+ZIP_OUT="$PROJECT_DIR/$APP_NAME-macos-$HOST_ARCH.zip"
 
 echo "==> Resolving screenpipe latest version"
 SP_VERSION=$(curl -fsSL https://registry.npmjs.org/screenpipe/latest \
@@ -32,16 +32,21 @@ if [ ! -f "$TARBALL" ]; then
     curl -fsSL "$SP_TARBALL_URL" -o "$TARBALL"
 fi
 
-echo "==> Building $APP_NAME (universal)"
-swift build -c release --arch arm64 --arch x86_64 --product "$APP_NAME"
+echo "==> Building $APP_NAME ($HOST_ARCH)"
+swift build -c release --arch "$HOST_ARCH" --product "$APP_NAME"
+BUILD_PRODUCT=".build/$HOST_ARCH-apple-macosx/release/$APP_NAME"
+if [ ! -f "$BUILD_PRODUCT" ]; then
+    echo "ERROR: expected built product at $BUILD_PRODUCT"
+    exit 1
+fi
 
 echo "==> Assembling .app bundle"
-rm -rf "$APP_BUNDLE" "$ZIP_OUT"
+rm -rf "$APP_BUNDLE" "$ZIP_OUT" "$PROJECT_DIR/$APP_NAME.zip"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 mkdir -p "$APP_BUNDLE/Contents/Helpers"
 
-cp ".build/apple/Products/Release/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+cp "$BUILD_PRODUCT" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp Resources/MengoDesktopInfo.plist "$APP_BUNDLE/Contents/Info.plist"
 cp -X Resources/MengoLogo.png "$APP_BUNDLE/Contents/Resources/MengoLogo.png"   # -X: don't copy extended attrs (codesign rejects FinderInfo/resource forks)
 cp -X Resources/synthesis-prompt.md "$APP_BUNDLE/Contents/Resources/synthesis-prompt.md"   # Flow's bootstrap synthesis prompt (loaded via Bundle.main)
@@ -75,7 +80,7 @@ fi
 # Signing. Prefer the self-signed dev cert (stable identity across rebuilds → TCC
 # grants survive; the bundled helper inherits them), else ad-hoc. The helper gets
 # the SAME identifier as the .app so macOS treats it as part of Mengo Desktop.
-CERT_NAME="ScreenpipeMenu Local Dev"
+CERT_NAME="${MENGO_SIGNING_IDENTITY:-Mengo Desktop Local Dev}"
 CERT_LINE=$(security find-identity -p basic login.keychain 2>/dev/null | grep "$CERT_NAME" || true)
 CERT_SHA=$(echo "$CERT_LINE" | awk '{print $2}' | head -1)
 if [ -n "$CERT_SHA" ]; then

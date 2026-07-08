@@ -51,4 +51,53 @@ final class SkillFilesTests: XCTestCase {
         XCTAssertEqual(SkillFiles.parseFlowParameters(Data("nope".utf8)).count, 0)
         XCTAssertEqual(SkillFiles.parseFlowStepSummaries(Data("nope".utf8)).count, 0)
     }
+
+    func test_rewriteSkillMarkdown_updatesFrontmatterAndParametersSection() {
+        let md = """
+        ---
+        name: old
+        description: old desc
+        ---
+
+        ## Intent
+
+        Do the thing.
+
+        ## Parameters
+
+        - `old_param`
+
+        ## Steps
+
+        1. Work
+        """
+        let updated = SkillFiles.rewriteSkillMarkdown(
+            md,
+            name: "New Skill",
+            description: "New description",
+            parameters: [FlowParameter(name: "account_id", description: "Account to inspect", defaultValue: "123", autoDetected: false)]
+        )
+        XCTAssertTrue(updated.contains("name: New Skill"))
+        XCTAssertTrue(updated.contains("description: New description"))
+        XCTAssertTrue(updated.contains("- `account_id` - Account to inspect; default: 123"))
+        XCTAssertTrue(updated.contains("## Steps"))
+        XCTAssertFalse(updated.contains("old_param"))
+    }
+
+    func test_rewriteFlowJSON_updatesParametersAndPreservesOtherFields() throws {
+        let data = Data("""
+        { "schemaVersion": 1, "steps": [{ "id": 1, "intent": "Open app" }], "parameters": [] }
+        """.utf8)
+        let updated = try SkillFiles.rewriteFlowJSON(data, parameters: [
+            FlowParameter(name: "email", description: "User email", defaultValue: "me@example.com", autoDetected: true)
+        ])
+        let json = try JSONSerialization.jsonObject(with: updated) as! [String: Any]
+        XCTAssertEqual(json["schemaVersion"] as? Int, 1)
+        XCTAssertNotNil(json["steps"])
+        let params = json["parameters"] as? [[String: Any]]
+        XCTAssertEqual(params?.first?["name"] as? String, "email")
+        XCTAssertEqual(params?.first?["description"] as? String, "User email")
+        XCTAssertEqual(params?.first?["default"] as? String, "me@example.com")
+        XCTAssertEqual(params?.first?["autoDetected"] as? Bool, true)
+    }
 }

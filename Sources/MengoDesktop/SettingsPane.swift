@@ -9,6 +9,7 @@ struct SettingsPane: View {
     let settings: SettingsStore
     let recorder: RecorderController
     let flow: FlowController
+    let onSignOut: () -> Void
     @State private var refreshing = false
 
     var body: some View {
@@ -33,9 +34,19 @@ struct SettingsPane: View {
             if let a = account.account {
                 HStack(spacing: 10) {
                     Text(a.email).font(Theme.body).foregroundStyle(Theme.secondaryText)
+                    if account.isLocalPreview {
+                        Text("Local preview")
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .background(Capsule().fill(Theme.elevatedBackground))
+                            .foregroundStyle(Theme.secondaryText)
+                    }
                     planBadge(a.plan)
                 }
-                if a.plan == .free {
+                if account.isLocalPreview {
+                    Text("Hosted account features are disabled in local preview. Recording and Flow run locally on this Mac.")
+                        .font(Theme.caption).foregroundStyle(Theme.mutedText)
+                } else if a.plan == .free {
                     let used = flow.library.filter(\.exists).count
                     let limit = account.flowLimit ?? 3
                     Text("\(used) of \(limit) flows used").font(Theme.caption).foregroundStyle(Theme.mutedText)
@@ -58,7 +69,7 @@ struct SettingsPane: View {
                     .disabled(refreshing)
                     if refreshing { ProgressView().controlSize(.small) }
                 }
-                Button("Sign out") { account.signOut() }
+                Button("Sign out") { onSignOut() }
                     .buttonStyle(.plain).foregroundStyle(Theme.stopped)
             } else {
                 Text("Not signed in.").font(Theme.body).foregroundStyle(Theme.secondaryText)

@@ -3,22 +3,28 @@ import XCTest
 
 @MainActor
 final class AppStateTests: XCTestCase {
+    private func makeState() -> AppState {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ScreenpipeFlowTests-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return AppState(skillsDir: dir)
+    }
 
     func testInitialStateIsIdle() {
-        let state = AppState()
+        let state = makeState()
         if case .idle = state.sessionState { return }
         XCTFail("expected .idle, got \(state.sessionState)")
     }
 
     func testTransitionToBrowsingTimeline() {
-        let state = AppState()
+        let state = makeState()
         state.beginBrowsingTimeline()
         if case .browsingTimeline = state.sessionState { return }
         XCTFail("expected .browsingTimeline")
     }
 
     func testTransitionToRecording() {
-        let state = AppState()
+        let state = makeState()
         let session = RecordingSession(mode: .proactive,
                                        bufferRangeStart: nil,
                                        activeRecordingStart: Date())
@@ -28,7 +34,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testTransitionToSynthesizingPreservesManifest() {
-        let state = AppState()
+        let state = makeState()
         let url = URL(fileURLWithPath: "/tmp/manifest.json")
         state.beginSynthesizing(manifest: url)
         if case .synthesizing(let m) = state.sessionState {
@@ -39,7 +45,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testFinalizeReturnsToIdle() {
-        let state = AppState()
+        let state = makeState()
         state.beginReviewing(skill: URL(fileURLWithPath: "/tmp/skill"))
         state.finalize()
         if case .idle = state.sessionState { return }
@@ -47,7 +53,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testAddFlowAppendsToLibrary() {
-        let state = AppState()
+        let state = makeState()
         let entry = FlowEntry(slug: "foo",
                               name: "Foo",
                               path: URL(fileURLWithPath: "/tmp/foo"),
@@ -58,7 +64,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testAddFlowReplacesExistingWithSameSlug() {
-        let state = AppState()
+        let state = makeState()
         let earlier = Date(timeIntervalSince1970: 1_700_000_000)
         let later = Date(timeIntervalSince1970: 1_700_000_100)
         state.addFlow(FlowEntry(slug: "x", name: "old", path: URL(fileURLWithPath: "/a"), createdAt: earlier))
@@ -68,7 +74,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testRemoveFlow() {
-        let state = AppState()
+        let state = makeState()
         state.addFlow(FlowEntry(slug: "a", name: "A",
                                 path: URL(fileURLWithPath: "/a"), createdAt: Date()))
         state.addFlow(FlowEntry(slug: "b", name: "B",
@@ -79,7 +85,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testLibrarySortedNewestFirst() {
-        let state = AppState()
+        let state = makeState()
         let earlier = Date(timeIntervalSince1970: 1_700_000_000)
         let later = Date(timeIntervalSince1970: 1_700_000_100)
         state.addFlow(FlowEntry(slug: "old", name: "Old",

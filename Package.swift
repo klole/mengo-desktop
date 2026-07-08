@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ScreenpipeMenu",
+    name: "MengoDesktop",
     platforms: [.macOS(.v15)],
     targets: [
         .executableTarget(
@@ -33,7 +33,10 @@ let package = Package(
         .testTarget(
             name: "MengoDesktopTests",
             dependencies: ["MengoDesktop"],
-            path: "Tests/MengoDesktopTests"
+            path: "Tests/MengoDesktopTests",
+            resources: [
+                .copy("Fixtures")
+            ]
         )
     ]
 )

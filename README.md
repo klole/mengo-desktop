@@ -1,64 +1,160 @@
-# ScreenpipeMenu
+# Mengo Desktop
 
-A tiny macOS menu bar app that runs [screenpipe](https://github.com/screenpipe/screenpipe) — your local AI memory of screen + mic + accessibility tree. No Node, no Terminal commands once installed. 100% local; nothing leaves your Mac.
+Mengo Desktop is an open-source macOS app for local AI memory and repeatable workflow capture. It runs [screenpipe](https://github.com/screenpipe/screenpipe) on your Mac, indexes recent screen/audio context locally, and helps turn a demonstrated task into a reusable agent skill.
 
-## Install (for coworkers — easiest way)
+Mengo is early V1 software. The core goal for this release is a reliable local loop:
 
-In **Claude Code**, paste:
+1. record local screen/audio context,
+2. search recent memory,
+3. record a workflow while narrating it,
+4. synthesize a skill with Codex or Claude Code,
+5. review, edit, save, and reuse that skill.
 
-> Install this for me: https://github.com/klole/screenpipe-menu
+## Status
 
-Claude Code will read `CLAUDE.md`, clone, run `install.sh`, and tell you what to do about permissions. Total time: ~3 minutes. No `sudo` required (installs into `~/Applications/`).
+Mengo Desktop is preparing for its first clean OSS V1 release. The app builds and the MengoDesktop test suite passes locally, but the public release checklist is still in progress. See [docs/release/mengo-desktop-v1-release-plan.md](docs/release/mengo-desktop-v1-release-plan.md) for the current release plan.
 
-## Install (manual)
+Known V1 gaps:
 
-```bash
-git clone https://github.com/klole/screenpipe-menu
-cd screenpipe-menu
-./install.sh                                # build (or download release), install, launch
-```
-
-Then grant **Screen Recording** and **Microphone** permissions when prompted (System Settings → Privacy & Security).
+- Developer ID notarization is not finished; local builds are signed for development.
+- Hosted Mengo account endpoints are optional in OSS preview builds; use local preview mode to run the app without a hosted account.
+- Codex runtime support is present in the app and must be smoke-tested before it is advertised as the default path.
+- Legacy ScreenpipeMenu and ScreenpipeFlow targets still exist in the repository while the V1 package is being cleaned up.
 
 ## Requirements
 
-- macOS 15 (Sequoia) or later
-- Apple Silicon (arm64) for pre-built releases — Intel Macs need to rebuild from source
-- Xcode 16+ / Swift 6 (only if building from source)
+- macOS 15 Sequoia or later
+- Apple Silicon for the current prebuilt helper path
+- Xcode 16+ / Swift 6 when building from source
+- A supported synthesis runtime:
+  - Codex CLI, when using the Codex runtime
+  - Claude Code CLI, when using the Claude Code runtime
 
-## What it does
+Mengo uses the local screenpipe HTTP API on `http://127.0.0.1:3030`.
 
-Once running, it sits in your menu bar as **● Recording**. Click to:
-- Pause / resume audio (without restarting the recorder)
-- Pause / resume screen capture
-- Open your data folder (`~/.screenpipe`)
-- Open the log file
-- Open Privacy Settings (one-click to where you grant permissions)
+## Install
 
-The data is queryable via Claude Code's MCP integration — `claude mcp add screenpipe ...` to enable, then ask Claude things like *"what was I working on 30 minutes ago?"* or *"summarize today's meetings"*.
-
-## Specs
-
-- ~150 MB on disk (the recorder binary + ML models for Parakeet ASR are bundled)
-- 5–10% CPU, 0.5–3 GB RAM while recording
-- ~20 GB/month of recordings (configurable in screenpipe's defaults; data dir is `~/.screenpipe`)
-- All processing is on-device. Audio transcription uses Parakeet (NVIDIA OSS, English-only) on Apple Silicon's GPU via MLX.
-
-## Build from source / developer setup
+The current installer builds or downloads `MengoDesktop.app`, installs it to `~/Applications`, and launches it.
 
 ```bash
-./bootstrap-cert.sh   # one-time: creates a self-signed cert in your keychain for stable signing
-./build.sh            # produces ScreenpipeMenu.app and ScreenpipeMenu.zip
+git clone https://github.com/klole/mengo-desktop.git
+cd mengo-desktop
+./install.sh
 ```
 
-`bootstrap-cert.sh` is optional but recommended for active development — without it, every rebuild has a new code hash and macOS will re-prompt for Screen Recording permission. With the stable cert, you grant once and it sticks across rebuilds.
+Then grant macOS permissions when prompted:
 
-## How the embedded recorder works
+- Screen Recording
+- Microphone
 
-`build.sh` downloads the screenpipe binary at build time from npmjs.org, embeds it under `Contents/Helpers/`, and codesigns the whole bundle with a matching identifier. macOS then attributes the spawned recorder's TCC checks (Screen Recording, Microphone) to ScreenpipeMenu.app instead of treating it as a separate process — which is what lets one permission grant cover the whole thing.
+If the app is not notarized yet, macOS may require right-click -> Open for local preview builds.
 
-The .app launches the recorder as a child process and talks to it on `http://127.0.0.1:3030`. When the .app quits, the recorder gets SIGTERM (then SIGKILL after 3 s).
+## Local Preview Mode
+
+Mengo Desktop V1 can run without hosted account setup.
+
+From the sign-in screen, choose **Continue in local preview**. This creates a local Pro preview session with no hosted token, no billing, and no account-management handoff. Recording data and generated skills stay on this Mac.
+
+For automated smoke tests, you can also launch with:
+
+```bash
+MENGO_PREVIEW_ACCOUNT=pro swift run MengoDesktop
+MENGO_PREVIEW_ACCOUNT=free swift run MengoDesktop
+```
+
+`MENGO_DEV_ACCOUNT` remains accepted as a legacy alias for local testing.
+
+## Build From Source
+
+```bash
+./bootstrap-cert.sh   # optional: creates a stable local development signing identity
+./build-mengo.sh      # produces MengoDesktop.app and MengoDesktop.zip
+```
+
+For tests:
+
+```bash
+swift test --filter MengoDesktopTests
+```
+
+The full `swift test` target is expected to become green before V1; legacy target cleanup is tracked in the release plan.
+
+## Runtime Setup
+
+Mengo Flow asks an agent runtime to convert a recorded workflow into a skill.
+
+For Claude Code:
+
+```bash
+claude mcp add screenpipe -s user -- npx -y screenpipe-mcp
+```
+
+For Codex:
+
+- Install the Codex CLI.
+- Select Codex in Mengo Settings.
+- Complete the runtime preflight shown by the app.
+
+The runtime receives the synthesis prompt and access to local screenpipe context through the configured MCP path. Review the generated skill before saving it.
+
+## What Mengo Records
+
+Mengo starts a bundled screenpipe helper that can capture:
+
+- screen frames and OCR,
+- microphone audio and transcription,
+- app/window metadata exposed by macOS,
+- local accessibility context where available.
+
+Data is stored locally by screenpipe, normally under `~/.screenpipe`. Generated skills are written to the skills directory used by the selected runtime, currently `~/.claude/skills` for the Claude-compatible skill flow.
+
+No recording data is intentionally uploaded by Mengo itself. When you synthesize a skill, the selected runtime may receive prompt/context data according to that runtime's configuration. Treat recordings as sensitive local data.
+
+## Repository Layout
+
+- `Sources/MengoDesktop` - main app
+- `Tests/MengoDesktopTests` - main app tests
+- `Resources/MengoDesktopInfo.plist` - app bundle metadata
+- `build-mengo.sh` - release bundle builder
+- `docs/manual-smoke-tests` - manual QA scripts
+- `docs/release` - release planning and gates
+- `Sources/ScreenpipeMenu`, `Sources/ScreenpipeFlow` - legacy targets retained during V1 cleanup
+
+## Troubleshooting
+
+Recorder does not start:
+
+- Confirm Screen Recording and Microphone permissions are granted to Mengo Desktop.
+- Quit and relaunch the app after changing macOS privacy settings.
+- Check `~/Library/Logs/MengoDesktop/recorder.log`.
+
+Runtime synthesis fails:
+
+- Confirm the selected runtime executable is installed.
+- Confirm screenpipe MCP setup for that runtime.
+- Confirm the skills output directory is writable.
+
+Account screen appears:
+
+- Click **Continue in local preview** for OSS preview use.
+- Hosted sign-in depends on `mengo.ai` account endpoints and is not required for local preview.
+
+Build fails:
+
+- Confirm Xcode 16+ is selected with `xcode-select -p`.
+- Run `swift --version` and confirm Swift 6+.
+- Remove stale local artifacts with `rm -rf .build MengoDesktop.app MengoDesktop.zip`.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). The highest-priority V1 work is tracked in [docs/release/mengo-desktop-v1-release-plan.md](docs/release/mengo-desktop-v1-release-plan.md).
+
+## Security
+
+Please do not file public issues for vulnerabilities or privacy-sensitive recorder behavior. See [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT. Unaffiliated with the upstream screenpipe project.
+MIT. See [LICENSE](LICENSE).
+
+Mengo Desktop is not affiliated with the upstream screenpipe project.

@@ -9,7 +9,7 @@ enum AccountState: Equatable {
     case signedIn(Account)
 }
 
-/// Owns the Mengo account: magic-link sign-in, cached entitlement, hard wall.
+/// Owns the Mengo account: local preview mode, magic-link sign-in, cached entitlement.
 /// HTTPS to `mengo.ai`; session token in the Keychain; account metadata cached
 /// in `~/Library/Application Support/MengoDesktop/account.json` so launches work offline.
 @Observable
@@ -30,9 +30,9 @@ final class AccountStore {
          env: [String: String] = ProcessInfo.processInfo.environment) {
         self.api = api; self.secrets = secrets; self.cacheURL = cacheURL; self.now = now
 
-        if let dev = env["MENGO_DEV_ACCOUNT"]?.lowercased(), dev == "pro" || dev == "free" {
-            let plan: Plan = (dev == "pro") ? .pro : .free
-            state = .signedIn(Account(email: "dev@mengo.local", plan: plan, flowLimit: plan == .pro ? nil : 3, validatedAt: now()))
+        let preview = env["MENGO_PREVIEW_ACCOUNT"]?.lowercased() ?? env["MENGO_DEV_ACCOUNT"]?.lowercased()
+        if let preview, preview == "pro" || preview == "free" {
+            startLocalPreview(plan: preview == "pro" ? .pro : .free)
         } else if secrets.get(SecretKeys.sessionToken) != nil, let cached = loadCachedAccount() {
             state = .signedIn(cached)
             Task { await refresh() }
@@ -52,6 +52,20 @@ final class AccountStore {
     var flowLimit: Int? { if case .signedIn(let a) = state { return a.flowLimit }; return nil }
     var account: Account? { if case .signedIn(let a) = state { return a }; return nil }
     var sessionToken: String? { secrets.get(SecretKeys.sessionToken) }
+    var isLocalPreview: Bool {
+        guard case .signedIn(let account) = state else { return false }
+        return secrets.get(SecretKeys.sessionToken) == nil && account.email.hasSuffix("@preview.mengo.local")
+    }
+
+    func startLocalPreview(plan: Plan = .pro) {
+        secrets.delete(SecretKeys.sessionToken)
+        try? FileManager.default.removeItem(at: cacheURL)
+        state = .signedIn(Account(email: "local@preview.mengo.local",
+                                  plan: plan,
+                                  flowLimit: plan == .pro ? nil : 3,
+                                  validatedAt: now()))
+        lastError = nil
+    }
 
     func sendMagicLink(email: String) async {
         let email = email.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -107,6 +121,7 @@ final class AccountStore {
     /// Falls back to the bare URL if the handoff call fails.
     func webURL(path: String) async -> URL {
         let base = URL(string: "https://mengo.ai")!.appendingPathComponent(path)
+        if isLocalPreview { return base }
         guard let token = secrets.get(SecretKeys.sessionToken),
               let code = try? await api.webHandoff(sessionToken: token),
               var comps = URLComponents(url: base, resolvingAgainstBaseURL: false) else { return base }

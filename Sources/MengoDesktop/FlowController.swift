@@ -168,6 +168,10 @@ final class FlowController {
 
     // MARK: - Preflight
 
+    func setHotkeyNote(_ note: String?) {
+        hotkeyNote = note
+    }
+
     func preflight() async -> PreflightFailure? {
         let s = await health.snapshot()
         if !s.healthy { return .screenpipeNotRunning }
@@ -335,9 +339,17 @@ final class FlowController {
         flowState = .idle
     }
 
+    /// Used by app-level sign-out. It abandons transient Flow UI without deleting
+    /// already generated review output; account sign-out itself owns access revocation.
+    func cancelForSignOut() {
+        if case .recording = flowState { hudHide() }
+        if case .browsingTimeline = flowState { flowState = .idle; return }
+        if case .recording = flowState { flowState = .idle; return }
+        if case .error = flowState { flowState = .idle }
+    }
+
     /// Apply Review edits and finalize. Renaming re-slugs the directory (collision → `-2` suffix);
-    /// the new name is reflected in the library index. (The in-place SKILL.md rewrite of edited
-    /// name/description/parameters is a follow-up — rename + library update is the critical path.)
+    /// the new name is reflected in the library index and the edited metadata is written to disk.
     func save(name: String, description: String?, parameters: [FlowParameter]) {
         guard case .reviewing(let dir) = flowState else { return }
         // Gate Free users at the configured flow limit. The current `dir` is the unsaved
@@ -360,6 +372,13 @@ final class FlowController {
             let target = parent.appendingPathComponent(desiredSlug)
             if (try? FileManager.default.moveItem(at: dir, to: target)) != nil { finalDir = target }
         }
+        do {
+            try persistReviewEdits(in: finalDir, name: trimmed.isEmpty ? finalDir.lastPathComponent : trimmed,
+                                   description: description, parameters: parameters)
+        } catch {
+            flowState = .error("Couldn't save skill edits: \(error)")
+            return
+        }
         libraryStore.remove(slug: dir.lastPathComponent)
         libraryStore.add(FlowEntry(slug: finalDir.lastPathComponent,
                                    name: trimmed.isEmpty ? finalDir.lastPathComponent : trimmed,
@@ -368,6 +387,20 @@ final class FlowController {
         library = libraryStore.load()
         flowState = .idle
         notify("Saved to \(finalDir.path)")
+    }
+
+    private func persistReviewEdits(in dir: URL, name: String, description: String?, parameters: [FlowParameter]) throws {
+        let skillURL = dir.appendingPathComponent("SKILL.md")
+        if let md = try? String(contentsOf: skillURL, encoding: .utf8) {
+            let updated = SkillFiles.rewriteSkillMarkdown(md, name: name, description: description, parameters: parameters)
+            try updated.write(to: skillURL, atomically: true, encoding: .utf8)
+        }
+
+        let flowURL = dir.appendingPathComponent("flow.json")
+        if let data = try? Data(contentsOf: flowURL) {
+            let updated = try SkillFiles.rewriteFlowJSON(data, parameters: parameters)
+            try updated.write(to: flowURL, options: .atomic)
+        }
     }
 
     // MARK: - Library actions

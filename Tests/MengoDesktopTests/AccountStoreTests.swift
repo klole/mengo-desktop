@@ -20,10 +20,32 @@ final class AccountStoreTests: XCTestCase {
     func test_init_noCachedSession_isSignedOut() {
         XCTAssertEqual(make().state, .signedOut)
     }
-    func test_devEnvVar_signsInSyntheticPro() {
+    func test_previewEnvVar_signsInSyntheticPro() {
+        let s = make(env: ["MENGO_PREVIEW_ACCOUNT": "pro"])
+        guard case .signedIn(let a) = s.state else { return XCTFail() }
+        XCTAssertEqual(a.plan, .pro); XCTAssertNil(a.flowLimit)
+        XCTAssertTrue(s.isLocalPreview)
+    }
+
+    func test_legacyDevEnvVar_stillSignsInSyntheticPro() {
         let s = make(env: ["MENGO_DEV_ACCOUNT": "pro"])
         guard case .signedIn(let a) = s.state else { return XCTFail() }
         XCTAssertEqual(a.plan, .pro); XCTAssertNil(a.flowLimit)
+        XCTAssertTrue(s.isLocalPreview)
+    }
+
+    func test_startLocalPreview_signsInWithoutTokenOrCache() {
+        let secrets = InMemorySecretStore()
+        let cache = cacheURL()
+        let s = make(secrets: secrets, cache: cache)
+        s.startLocalPreview(plan: .free)
+        guard case .signedIn(let a) = s.state else { return XCTFail() }
+        XCTAssertEqual(a.email, "local@preview.mengo.local")
+        XCTAssertEqual(a.plan, .free)
+        XCTAssertEqual(a.flowLimit, 3)
+        XCTAssertNil(secrets.get(SecretKeys.sessionToken))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: cache.path))
+        XCTAssertTrue(s.isLocalPreview)
     }
     func test_sendMagicLink_movesToAwaitingLink() async {
         let s = make()

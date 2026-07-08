@@ -4,7 +4,7 @@ import XCTest
 @MainActor
 final class ManifestWriterTests: XCTestCase {
 
-    var tmpDir: URL!
+    nonisolated(unsafe) var tmpDir: URL!
 
     override func setUpWithError() throws {
         tmpDir = URL(fileURLWithPath: NSTemporaryDirectory())

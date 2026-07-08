@@ -1,0 +1,75 @@
+# Mengo Desktop V1 Manual Smoke Test
+
+Run this checklist before publishing a V1 or V1-preview release.
+
+## Fresh Install
+
+- [ ] Download the release zip.
+- [ ] Verify checksum if one is published.
+- [ ] Unzip `MengoDesktop.app`.
+- [ ] Run `codesign --verify --deep --strict --verbose=2 MengoDesktop.app`.
+- [ ] Run `spctl --assess --type execute -vv MengoDesktop.app`, or confirm the release is explicitly labeled non-notarized preview.
+- [ ] Move the app to `~/Applications`.
+- [ ] Launch from Finder.
+- [ ] Grant Screen Recording permission.
+- [ ] Grant Microphone permission.
+- [ ] Quit and relaunch.
+- [ ] Recorder reaches a healthy/recording state.
+
+## Memory
+
+- [ ] Start recording.
+- [ ] Use several apps/windows.
+- [ ] Search recent memory.
+- [ ] Pause recording.
+- [ ] Resume recording.
+- [ ] Confirm errors are understandable if the screenpipe helper is unavailable.
+
+## Flow
+
+- [ ] Start flow recording from the button.
+- [ ] Start flow recording from the hotkey.
+- [ ] Narrate a simple workflow.
+- [ ] Stop recording.
+- [ ] Synthesize with the selected runtime.
+- [ ] Review generated `SKILL.md`.
+- [ ] Edit name, description, and at least one parameter.
+- [ ] Save.
+- [ ] Confirm `SKILL.md`, `flow.json`, and `frames/` exist.
+- [ ] Invoke the skill from the selected runtime.
+- [ ] Delete the skill from Library.
+- [ ] Confirm files are removed.
+
+## Codex Runtime
+
+- [ ] Select Codex in Settings.
+- [ ] Confirm preflight detects the Codex executable.
+- [ ] Complete record -> synthesize -> review -> save.
+- [ ] Break Codex setup and confirm the error mentions Codex.
+
+## Claude Code Runtime
+
+- [ ] Select Claude Code in Settings.
+- [ ] Confirm `claude mcp add screenpipe -s user -- npx -y screenpipe-mcp` setup.
+- [ ] Complete record -> synthesize -> review -> save.
+- [ ] Break Claude setup and confirm the error mentions Claude Code.
+
+## Account/Preview State
+
+- [ ] Launch without preview account.
+- [ ] Click **Continue in local preview** and confirm the main app opens.
+- [ ] Launch with `MENGO_PREVIEW_ACCOUNT=free`.
+- [ ] Launch with `MENGO_PREVIEW_ACCOUNT=pro`.
+- [ ] Sign out while idle.
+- [ ] Sign out while recording and confirm recording stops.
+- [ ] Sign out while reviewing and confirm no generated files are silently deleted.
+
+## Failure States
+
+- [ ] Missing runtime executable.
+- [ ] Missing MCP setup.
+- [ ] Screen Recording denied.
+- [ ] Microphone denied.
+- [ ] Skills output directory not writable.
+- [ ] Duplicate skill name.
+- [ ] Network unavailable if hosted account is enabled.

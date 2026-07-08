@@ -26,14 +26,16 @@ final class AppState {
 
     @ObservationIgnored var lastSession: RecordingSession?
     @ObservationIgnored var lastSkillPath: URL?
+    @ObservationIgnored private let skillsDirectory: URL
 
-    init() {
+    init(skillsDir: URL = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent(".claude/skills", isDirectory: true)) {
+        self.skillsDirectory = skillsDir
         loadLibraryFromDisk()
     }
 
     private var skillsDir: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".claude/skills", isDirectory: true)
+        skillsDirectory
     }
 
     private func loadLibraryFromDisk() {

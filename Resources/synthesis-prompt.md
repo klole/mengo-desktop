@@ -10,8 +10,8 @@ INPUTS:
     If those tools are unavailable, fall back to the HTTP API at
     http://127.0.0.1:3030. The /search and /audio endpoints require auth:
       1. Get the token: `screenpipe auth token` (the binary is at
-         ~/Library/Application Support/ScreenpipeMenu/bin/screenpipe or
-         ~/Applications/ScreenpipeMenu.app/Contents/Helpers/screenpipe).
+         ~/Applications/MengoDesktop.app/Contents/Helpers/screenpipe, or the
+         bundled helper inside the running Mengo Desktop app).
       2. Pass it on each request: `curl -H "Authorization: Bearer $TOKEN" ...`
     /health does NOT require auth.
 

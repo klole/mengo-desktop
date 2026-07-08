@@ -9,6 +9,8 @@ ScreenpipeFlow.app/
 ScreenpipeFlow.zip
 MengoDesktop.app/
 MengoDesktop.zip
+MengoDesktop-*.zip
 *.dSYM
 .DS_Store
+.claude/
 .superpowers/

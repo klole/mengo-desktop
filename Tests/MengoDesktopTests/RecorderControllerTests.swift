@@ -92,6 +92,17 @@ final class RecorderControllerTests: XCTestCase {
         await eventually { c.status == .recording }
     }
 
+    func test_start_whenAlreadyStartingOrRecording_doesNotSpawnDuplicateProcess() async {
+        let proc = StubProcess()
+        let c = makeController(process: proc)
+        await c.start()
+        await c.start()
+        XCTAssertEqual(proc.startCount, 1)
+        await eventually { c.status == .recording }
+        await c.start()
+        XCTAssertEqual(proc.startCount, 1)
+    }
+
     func test_start_whenBinaryMissing_setsError() async {
         let c = makeController(ensureBinary: { throw BinaryManager.BinaryError.binaryNotFound(searched: "/x") })
         await c.start()

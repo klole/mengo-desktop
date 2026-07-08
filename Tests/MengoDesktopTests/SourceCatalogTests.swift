@@ -44,4 +44,24 @@ final class SourceCatalogTests: XCTestCase {
         XCTAssertThrowsError(try SourceCatalog.decodeMonitors(from: Data("not json".utf8)))
         XCTAssertThrowsError(try SourceCatalog.decodeAudioDevices(from: Data(#"{"success":true}"#.utf8)))
     }
+
+    func test_cliCatalog_throwsOnNonZeroExit() async throws {
+        let script = FileManager.default.temporaryDirectory
+            .appendingPathComponent("failing-screenpipe-\(UUID().uuidString).sh")
+        try """
+        #!/usr/bin/env bash
+        echo "permission denied" >&2
+        exit 7
+        """.write(to: script, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+
+        let catalog = ScreenpipeCLICatalog(binaryURL: { script })
+        do {
+            _ = try await catalog.availableMonitors()
+            XCTFail("expected command failure")
+        } catch let error as SourceCatalog.CLIError {
+            XCTAssertEqual(error, .commandFailed(args: ["vision", "list", "-o", "json"], status: 7, stderr: "permission denied"))
+            XCTAssertTrue(error.description.contains("permission denied"))
+        }
+    }
 }

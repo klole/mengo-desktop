@@ -78,6 +78,7 @@ final class RecorderController {
     /// Called from `applicationDidFinishLaunching`. Ensures the bundled helper,
     /// requests TCC, spawns `screenpipe record`, begins health polling.
     func start() async {
+        guard status == .idle else { return }
         let binaryURL: URL
         do { binaryURL = try ensureBinaryClosure() }
         catch {

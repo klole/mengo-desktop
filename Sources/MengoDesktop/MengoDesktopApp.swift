@@ -36,13 +36,17 @@ struct MengoDesktopApp: App {
         _hotkeys = State(initialValue: hk)
         _flow = State(initialValue: fl)
         AppDelegate.sharedHotkeys = hk
+        AppDelegate.sharedAccount = acct
+        AppDelegate.sharedSettings = st
     }
 
     var body: some Scene {
         Window("Mengo Desktop", id: "main") {
             Group {
                 if case .signedIn = account.state {
-                    MainWindowView(appState: appState, recorder: recorder, account: account, settings: settings, flow: flow)
+                    MainWindowView(appState: appState, recorder: recorder, account: account, settings: settings, flow: flow) {
+                        signOut()
+                    }
                 } else {
                     SignInView(account: account)
                 }
@@ -79,6 +83,13 @@ struct MengoDesktopApp: App {
         }
         .menuBarExtraStyle(.menu)
     }
+
+    private func signOut() {
+        flow.cancelForSignOut()
+        recorder.stop()
+        account.signOut()
+        appState.selectedSection = .memory
+    }
 }
 
 /// Carries lifecycle callbacks SwiftUI's scene phase doesn't reliably surface.
@@ -103,18 +114,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppDelegate.startRecorderIfWanted()
 
         // Global hotkeys: ⌃⌥R toggles a Flow recording; ⌃⌥G opens the "grab last N minutes" picker.
-        AppDelegate.sharedHotkeys?.register(HotkeyManager.recordToggle) {
+        let recordRegistered = AppDelegate.sharedHotkeys?.register(HotkeyManager.recordToggle) {
             Task { @MainActor in await AppDelegate.sharedFlowController?.toggleRecording() }
-        }
-        AppDelegate.sharedHotkeys?.register(HotkeyManager.grabLast) {
+        } ?? false
+        let grabRegistered = AppDelegate.sharedHotkeys?.register(HotkeyManager.grabLast) {
             NotificationCenter.default.post(name: .openFlowTimeline, object: nil)
+        } ?? false
+        if !recordRegistered || !grabRegistered {
+            AppDelegate.sharedFlowController?.setHotkeyNote("Global shortcuts could not be registered. Use the Flow buttons instead.")
         }
 
         // Local-notification permission for "skill ready for review" (best-effort).
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
         // Offer to finish an interrupted Flow recording, if one was left behind.
-        if let flow = AppDelegate.sharedFlowController, let manifest = flow.checkForRecovery() {
+        if let account = AppDelegate.sharedAccount, case .signedIn = account.state,
+           let flow = AppDelegate.sharedFlowController, let manifest = flow.checkForRecovery() {
             let a = NSAlert()
             a.messageText = "An earlier recording was interrupted"
             a.informativeText = "Mengo Flow found a recording you didn't finish (the app quit mid-recording). Synthesize a skill from it now?"

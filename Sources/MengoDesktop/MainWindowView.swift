@@ -12,6 +12,7 @@ struct MainWindowView: View {
     let account: AccountStore
     let settings: SettingsStore
     let flow: FlowController
+    let onSignOut: () -> Void
 
     var body: some View {
         NavigationSplitView {
@@ -28,7 +29,7 @@ struct MainWindowView: View {
                 }
                 Spacer(minLength: 8)
                 VStack(spacing: 8) {
-                    if !account.isPro {
+                    if !account.isPro, !account.isLocalPreview {
                         Button {
                             Task { NSWorkspace.shared.open(await account.webURL(path: "/upgrade")) }
                         } label: {
@@ -51,7 +52,7 @@ struct MainWindowView: View {
                 case .memory:   MemoryPane(recorder: recorder)
                 case .flow:     FlowPane(flow: flow)
                 case .library:  LibraryPane(flow: flow)
-                case .settings: SettingsPane(account: account, settings: settings, recorder: recorder, flow: flow)
+                case .settings: SettingsPane(account: account, settings: settings, recorder: recorder, flow: flow, onSignOut: onSignOut)
                 default:        ComingSoonPane(section: appState.selectedSection)
                 }
             }

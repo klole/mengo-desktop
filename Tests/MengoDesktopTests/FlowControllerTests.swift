@@ -59,7 +59,9 @@ final class FlowControllerTests: XCTestCase {
         settings: SettingsStore? = nil,
         entitlement: @escaping @MainActor () -> FlowController.Entitlement = { .init(isPro: true, flowLimit: nil) },
         onFlowLimitReached: @escaping @MainActor () -> Void = { },
-        now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_700_000_000) }
+        now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_700_000_000) },
+        hudShow: @escaping (FlowSession, @escaping () -> Void) -> Void = { _, _ in },
+        hudHide: @escaping () -> Void = { }
     ) -> FlowController {
         let base = tmpDir()
         let st = settings ?? makeSettings()
@@ -78,13 +80,21 @@ final class FlowControllerTests: XCTestCase {
             entitlement: entitlement,
             onFlowLimitReached: onFlowLimitReached,
             now: now,
-            hudShow: { _, _ in }, hudHide: { }, notify: { _ in },
+            hudShow: hudShow, hudHide: hudHide, notify: { _ in },
             onPreflightFailure: { _ in })
     }
 
     // MARK: state machine + preflight
 
     func test_initial_isIdle() { XCTAssertEqual(makeController().flowState, .idle) }
+
+    func test_setHotkeyNote_surfacesMessage() {
+        let c = makeController()
+        c.setHotkeyNote("shortcuts unavailable")
+        XCTAssertEqual(c.hotkeyNote, "shortcuts unavailable")
+        c.setHotkeyNote(nil)
+        XCTAssertNil(c.hotkeyNote)
+    }
 
     func test_preflight_pass() async { let r = await makeController().preflight(); XCTAssertNil(r) }
     func test_preflight_screenpipeUnhealthy() async {
@@ -110,6 +120,23 @@ final class FlowControllerTests: XCTestCase {
     func test_start_blockedByPreflight_staysIdle() async {
         let c = makeController(executableOverride: { _ in nil })   // → .runtimeNotFound; onPreflightFailure is a no-op in tests
         await c.start()
+        XCTAssertEqual(c.flowState, .idle)
+    }
+
+    func test_cancelForSignOut_whileRecording_hidesHUDAndReturnsIdle() async {
+        var didHideHUD = false
+        let c = makeController(hudHide: { didHideHUD = true })
+        await c.start()
+        guard case .recording = c.flowState else { return XCTFail("expected recording") }
+        c.cancelForSignOut()
+        XCTAssertEqual(c.flowState, .idle)
+        XCTAssertTrue(didHideHUD)
+    }
+
+    func test_cancelForSignOut_whileBrowsingTimeline_returnsIdle() {
+        let c = makeController()
+        c.beginBrowsingTimeline()
+        c.cancelForSignOut()
         XCTAssertEqual(c.flowState, .idle)
     }
 
@@ -180,18 +207,41 @@ final class FlowControllerTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
     }
 
-    func test_save_renamesSlugDir_andUpdatesLibrary() async {
+    func test_save_renamesSlugDir_andUpdatesLibrary() async throws {
         var t = Date(timeIntervalSince1970: 1_000_000)
         let parent = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("skills-\(UUID().uuidString)")
         let oldDir = parent.appendingPathComponent("old-slug")
         try? FileManager.default.createDirectory(at: oldDir, withIntermediateDirectories: true)
-        try? "x".write(to: oldDir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        try? """
+        ---
+        name: old-slug
+        description: old
+        ---
+
+        ## Parameters
+
+        - `old`
+
+        ## Steps
+
+        1. Work
+        """.write(to: oldDir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        try? #"{"schemaVersion":1,"parameters":[],"steps":[{"id":1,"intent":"Work"}]}"#.write(to: oldDir.appendingPathComponent("flow.json"), atomically: true, encoding: .utf8)
         let c = makeController(synthesis: StubSynthesis(result: .success(outputDir: oldDir, slug: "old-slug")), now: { t })
         await c.start(); t = Date(timeIntervalSince1970: 1_000_030); await c.stop()
-        c.save(name: "New Name", description: "desc", parameters: [])
+        c.save(name: "New Name", description: "desc", parameters: [
+            FlowParameter(name: "user_email", description: "Email to use", defaultValue: "me@example.com", autoDetected: false)
+        ])
         XCTAssertEqual(c.flowState, .idle)
         XCTAssertEqual(c.library.first?.slug, "new-name")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: parent.appendingPathComponent("new-name/SKILL.md").path))
+        let skillURL = parent.appendingPathComponent("new-name/SKILL.md")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: skillURL.path))
+        let savedMarkdown = try String(contentsOf: skillURL, encoding: .utf8)
+        XCTAssertTrue(savedMarkdown.contains("name: New Name"))
+        XCTAssertTrue(savedMarkdown.contains("description: desc"))
+        XCTAssertTrue(savedMarkdown.contains("- `user_email` - Email to use; default: me@example.com"))
+        let flowData = try Data(contentsOf: parent.appendingPathComponent("new-name/flow.json"))
+        XCTAssertEqual(SkillFiles.parseFlowParameters(flowData).map(\.name), ["user_email"])
         XCTAssertFalse(FileManager.default.fileExists(atPath: oldDir.path))
     }
 

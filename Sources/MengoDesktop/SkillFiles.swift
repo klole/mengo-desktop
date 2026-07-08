@@ -63,4 +63,78 @@ enum SkillFiles {
             return (s.inferred == true) ? "\(n). \(intent)  (inferred — verify)" : "\(n). \(intent)"
         }
     }
+
+    static func rewriteSkillMarkdown(_ text: String, name: String, description: String?, parameters: [FlowParameter]) -> String {
+        let parsed = parseSkillMarkdown(text)
+        let cleanName = oneLine(name.isEmpty ? "Untitled Skill" : name)
+        let cleanDescription = description.map(oneLine)
+        let body = rewriteParametersSection(in: parsed.body, parameters: parameters)
+        var lines = ["---", "name: \(cleanName)"]
+        if let cleanDescription, !cleanDescription.isEmpty {
+            lines.append("description: \(cleanDescription)")
+        }
+        lines.append("---")
+        lines.append("")
+        lines.append(body.trimmingCharacters(in: .newlines))
+        lines.append("")
+        return lines.joined(separator: "\n")
+    }
+
+    static func rewriteFlowJSON(_ data: Data, parameters: [FlowParameter]) throws -> Data {
+        var root = (try JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+        root["parameters"] = parameters.map { param in
+            var item: [String: Any] = [
+                "name": oneLine(param.name),
+                "autoDetected": param.autoDetected
+            ]
+            if let description = param.description.map(oneLine), !description.isEmpty {
+                item["description"] = description
+            }
+            if let value = param.defaultValue, !value.isEmpty {
+                item["default"] = value
+            }
+            return item
+        }
+        return try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys])
+    }
+
+    private static func oneLine(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func rewriteParametersSection(in body: String, parameters: [FlowParameter]) -> String {
+        let section = renderedParametersSection(parameters)
+        var lines = body.components(separatedBy: "\n")
+        guard let start = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces) == "## Parameters" }) else {
+            if parameters.isEmpty { return body }
+            var out = body.trimmingCharacters(in: .newlines)
+            if !out.isEmpty { out += "\n\n" }
+            return out + section
+        }
+        var end = lines.index(after: start)
+        while end < lines.endIndex {
+            let trimmed = lines[end].trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("## ") { break }
+            end = lines.index(after: end)
+        }
+        lines.replaceSubrange(start..<end, with: section.components(separatedBy: "\n"))
+        return lines.joined(separator: "\n")
+    }
+
+    private static func renderedParametersSection(_ parameters: [FlowParameter]) -> String {
+        if parameters.isEmpty {
+            return "## Parameters\n\nNo parameters."
+        }
+        let rows = parameters.map { param -> String in
+            var line = "- `\(oneLine(param.name))`"
+            let details = [param.description.map(oneLine), param.defaultValue.map { "default: \($0)" }]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+            if !details.isEmpty { line += " - " + details.joined(separator: "; ") }
+            return line
+        }
+        return "## Parameters\n\n" + rows.joined(separator: "\n")
+    }
 }

@@ -65,10 +65,16 @@ struct ScreenpipeCLICatalog: RecordingSourceCatalog {
             env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(existingPath)"
             proc.environment = env
             let out = Pipe(); proc.standardOutput = out
-            proc.standardError = Pipe()
+            let err = Pipe(); proc.standardError = err
             try proc.run()
             let data = out.fileHandleForReading.readDataToEndOfFile()
+            let errData = err.fileHandleForReading.readDataToEndOfFile()
             proc.waitUntilExit()
+            guard proc.terminationStatus == 0 else {
+                let stderr = String(data: errData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                throw SourceCatalog.CLIError.commandFailed(args: args, status: proc.terminationStatus, stderr: stderr)
+            }
             return data
         }.value
     }
@@ -76,6 +82,21 @@ struct ScreenpipeCLICatalog: RecordingSourceCatalog {
 
 /// Pure decoders — split out so tests don't need a subprocess.
 enum SourceCatalog {
+    enum CLIError: Error, Equatable, CustomStringConvertible {
+        case commandFailed(args: [String], status: Int32, stderr: String?)
+
+        var description: String {
+            switch self {
+            case .commandFailed(let args, let status, let stderr):
+                let command = args.joined(separator: " ")
+                if let stderr, !stderr.isEmpty {
+                    return "screenpipe \(command) failed with exit \(status): \(stderr)"
+                }
+                return "screenpipe \(command) failed with exit \(status)"
+            }
+        }
+    }
+
     private struct MonitorsResponse: Decodable {
         struct Item: Decodable { let id: Int; let name: String; let width: Int; let height: Int; let is_default: Bool }
         let data: [Item]

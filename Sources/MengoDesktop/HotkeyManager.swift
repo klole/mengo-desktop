@@ -23,14 +23,19 @@ final class HotkeyManager {
     // the OS reclaims them on exit. (Cleanup here would cross actor isolation in
     // deinit, which Swift 6 forbids.)
 
-    func register(_ binding: Binding, action: @escaping () -> Void) {
+    @discardableResult
+    func register(_ binding: Binding, action: @escaping () -> Void) -> Bool {
         var hkRef: EventHotKeyRef?
         let hkID = EventHotKeyID(signature: OSType(0x4D454E47),   // "MENG"
                                  id: UInt32(registered.count + 1))
         let status = RegisterEventHotKey(binding.keyCode, binding.modifiers, hkID,
                                          GetApplicationEventTarget(), 0, &hkRef)
-        if status != noErr { Log.line("hotkey registration failed: status=\(status)"); return }
+        if status != noErr {
+            Log.line("hotkey registration failed: status=\(status)")
+            return false
+        }
         if let ref = hkRef { registered.append((ref, action)) }
+        return hkRef != nil
     }
 
     private func installHandler() {
