@@ -36,6 +36,7 @@ Completed or improved:
 - Added `scripts/notarize-mengo.sh` and `MENGO_SIGN_FOR_NOTARIZATION=1` packaging support for Developer ID hardened-runtime signing plus Apple notarization.
 - Added `scripts/smoke-codex-runtime.sh` for repeatable Codex CLI/MCP/final-message smoke testing.
 - Verified `@screenpipe/cli-darwin-x64` package availability in npm, but documented the preview release as Apple Silicon-only until an Intel-built artifact is smoke-tested on Intel hardware.
+- Prepared a draft `v0.1.0-preview` prerelease with `MengoDesktop-macos-arm64.zip` attached; it remains unpublished.
 
 Current verification:
 
@@ -49,6 +50,7 @@ Current verification:
 - Codex CLI scripted preflight passes locally after adding `screenpipe` MCP: `codex-cli 0.143.0`, `codex mcp list` includes `screenpipe`, and `codex exec --output-last-message` writes the final JSON line Mengo parses.
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
 - Architecture support status: `build-mengo.sh` supports host-specific `arm64` and `x86_64` packaging; the current local artifact and preview notes are Apple Silicon-only because Intel hardware smoke is still missing.
+- Draft release asset digest matches local checksum: `sha256:81b08881c1e2dbb073cfcb283f6fcb6136059fb3f143b2d15be26d2a5434ec4c`.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.
 
 Still open:

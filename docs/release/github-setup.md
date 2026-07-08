@@ -72,3 +72,12 @@ Do not publish the preview release until:
 - Local ad-hoc packaging path works through `./build-mengo.sh`.
 - Release notarization path is scripted in `scripts/notarize-mengo.sh`.
 - Current local keychain has an Apple Development identity only; a Developer ID Application certificate and notarytool profile are still required before a notarized V1 can be published.
+
+## Draft Release
+
+- Draft prerelease: https://github.com/klole/mengo-desktop/releases/tag/untagged-1364ef715b4b6741d7dd
+- Intended tag: `v0.1.0-preview`
+- Target: `v1-release-readiness`
+- Asset: `MengoDesktop-macos-arm64.zip`
+- Asset digest reported by GitHub: `sha256:81b08881c1e2dbb073cfcb283f6fcb6136059fb3f143b2d15be26d2a5434ec4c`
+- Status: draft, not published.

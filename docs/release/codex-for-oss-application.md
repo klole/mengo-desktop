@@ -28,10 +28,11 @@ Mengo is early, but it is directly aligned with Codex maintainer workflows: it h
 
 - Current star count: 0 as of 2026-07-08.
 - Current fork count: 0 as of 2026-07-08.
-- Current release tag: existing `v1.0.0` release is pre-cleanup and should not be used as the Mengo Desktop V1 evidence; publish a fresh `v0.1.0-preview` or `v1.0.0` after the readiness PR lands.
-- Release download count: fill after the new release is published.
+- Current release tag: existing `v1.0.0` release is pre-cleanup and should not be used as the Mengo Desktop V1 evidence; a draft `v0.1.0-preview` prerelease is prepared but not published.
+- Release download count: 0 on the draft `MengoDesktop-macos-arm64.zip` asset; fill again after publication.
 - CI status: macOS `build-test` passes on draft PR #8 after the V1 readiness fixes; re-check immediately before applying.
 - Draft PR: https://github.com/klole/mengo-desktop/pull/8
+- Draft release: https://github.com/klole/mengo-desktop/releases/tag/untagged-1364ef715b4b6741d7dd
 - Demo video/GIF: `docs/assets/mengo-desktop-preview.gif` exists; replace with a real record-to-skill walkthrough after the full app smoke passes.
 - Codex runtime smoke result: scripted CLI/MCP/final-message smoke passed locally with `codex-cli 0.143.0`; full app record-to-skill smoke still needed.
 - Notarization status: notarization path is scripted, but a Developer ID Application certificate and notarytool profile are still required.
