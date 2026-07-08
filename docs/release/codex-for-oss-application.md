@@ -34,14 +34,15 @@ Mengo is early, but it is directly aligned with Codex maintainer workflows: it h
 - Draft PR: https://github.com/klole/mengo-desktop/pull/8
 - Draft release: https://github.com/klole/mengo-desktop/releases/tag/untagged-1364ef715b4b6741d7dd
 - Demo video/GIF: `docs/assets/mengo-desktop-preview.gif` exists; replace with a real record-to-skill walkthrough after the full app smoke passes.
-- Codex runtime smoke result: scripted CLI/MCP/final-message smoke passed locally with `codex-cli 0.143.0`; full app record-to-skill smoke still needed.
+- Codex runtime smoke result: scripted CLI/MCP/final-message smoke passed locally with `codex-cli 0.143.0`; local in-app Codex record-to-synthesize-to-review persistence smoke passed after normalizing parent output directories to the generated skill slug directory.
 - Notarization status: notarization path is scripted, but a Developer ID Application certificate and notarytool profile are still required.
 
 ## Do Not Claim
 
 - Do not claim broad adoption unless the public repo metrics support it.
 - Do not use upstream screenpipe stars as Mengo Desktop stars.
-- Do not claim notarization or Codex runtime smoke completion until verified.
+- Do not claim notarization until verified.
+- Do not claim Codex as the default runtime until the broken-runtime error path and full clean-user manual matrix pass.
 
 ## Stronger Final Version Should Mention
 

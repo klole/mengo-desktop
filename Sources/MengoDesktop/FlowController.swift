@@ -59,6 +59,7 @@ final class FlowController {
     private(set) var library: [FlowEntry] = []
     /// A quiet note shown in the Flow pane (e.g. "⌃⌥R is in use by another app").
     private(set) var hotkeyNote: String?
+    var synthesisRuntimeDisplayName: String { settings.synthesisRuntime.displayName }
 
     // Injected deps.
     @ObservationIgnored private let screenpipeToken: String
@@ -302,10 +303,11 @@ final class FlowController {
             }
             switch result {
             case .success(let dir, let slug):
-                let entry = FlowEntry(slug: slug, name: slug, path: dir, createdAt: now(),
+                let skillDir = resolvedSkillDir(reportedOutputDir: dir, slug: slug)
+                let entry = FlowEntry(slug: slug, name: slug, path: skillDir, createdAt: now(),
                                       sourceManifestId: manifestURL.deletingPathExtension().lastPathComponent)
                 libraryStore.add(entry); library = libraryStore.load()
-                flowState = .reviewing(dir)
+                flowState = .reviewing(skillDir)
                 notify("Skill ‘\(slug)’ ready for review.")
             case .failure(let message):
                 flowState = .error("Synthesis failed: \(message)   (log: \(logURL.path))")
@@ -313,6 +315,22 @@ final class FlowController {
         } catch {
             flowState = .error("Synthesis subprocess error: \(error)   (log: \(logURL.path))")
         }
+    }
+
+    private func resolvedSkillDir(reportedOutputDir dir: URL, slug: String) -> URL {
+        let fm = FileManager.default
+        if fm.fileExists(atPath: dir.appendingPathComponent("SKILL.md").path) ||
+            fm.fileExists(atPath: dir.appendingPathComponent("flow.json").path) {
+            return dir
+        }
+
+        let candidate = dir.appendingPathComponent(slug, isDirectory: true)
+        if fm.fileExists(atPath: candidate.appendingPathComponent("SKILL.md").path) ||
+            fm.fileExists(atPath: candidate.appendingPathComponent("flow.json").path) {
+            return candidate
+        }
+
+        return dir
     }
 
     // MARK: - Review actions

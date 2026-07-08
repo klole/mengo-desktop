@@ -5,6 +5,7 @@ Run this checklist before publishing a V1 or V1-preview release.
 ## Fresh Install
 
 - [x] Scripted clean-home check: `HOME=$(mktemp -d) swift test` passes with 186 tests, 0 failures.
+- [x] Latest local full test run after Codex path normalization: `swift test` passes with 187 tests, 0 failures.
 - [ ] Download the release zip.
 - [ ] Verify checksum if one is published.
 - [ ] Unzip `MengoDesktop.app`.
@@ -46,9 +47,9 @@ Run this checklist before publishing a V1 or V1-preview release.
 - [x] Scripted preflight: `codex --version` works locally (`codex-cli 0.143.0`).
 - [x] Scripted preflight: `codex mcp list` includes `screenpipe`.
 - [x] Scripted preflight: `codex exec ... --output-last-message <file>` writes the final JSON line Mengo parses.
-- [ ] Select Codex in Settings.
-- [ ] Confirm preflight detects the Codex executable.
-- [ ] Complete record -> synthesize -> review -> save.
+- [x] Select Codex in Settings.
+- [x] Confirm preflight detects the Codex executable.
+- [x] Complete record -> synthesize -> review -> save. Local smoke created `~/.claude/skills/record-mengo-flow-skill/` and persisted the library path to that slug directory.
 - [ ] Break Codex setup and confirm the error mentions Codex.
 
 Repeat the scripted preflight with:

@@ -31,7 +31,7 @@ struct FlowPane: View {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Mengo Flow").font(Theme.title).foregroundStyle(Theme.primaryText)
-                    Text("Record a task once — narrating what you do — and Mengo turns it into a reusable Claude Code skill.")
+                    Text("Record a task once — narrating what you do — and Mengo turns it into a reusable agent skill.")
                         .font(Theme.body).foregroundStyle(Theme.secondaryText).fixedSize(horizontal: false, vertical: true)
                 }
                 HStack(spacing: 10) {
@@ -50,8 +50,8 @@ struct FlowPane: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("How it works").font(Theme.headline).foregroundStyle(Theme.primaryText)
                     step(1, "Start recording, then perform the task on your Mac — say out loud what you're doing and why. Call out anything that changes each time (“treat my email as a variable”).")
-                    step(2, "Stop. Mengo asks Claude Code to watch the recording and write a skill — SKILL.md, flow.json, key screenshots — into ~/.claude/skills/.")
-                    step(3, "Review it, tweak the name and parameters, and Save. Now “claude” can run it again on demand.")
+                    step(2, "Stop. Mengo asks \(flow.synthesisRuntimeDisplayName) to watch the recording and write a skill — SKILL.md, flow.json, key screenshots — into ~/.claude/skills/.")
+                    step(3, "Review it, tweak the name and parameters, and Save. Your selected runtime can run it again on demand.")
                 }
             }
             .padding(28)
@@ -103,7 +103,7 @@ struct FlowPane: View {
         VStack(spacing: 12) {
             ProgressView().controlSize(.large)
             Text("Building your skill…").font(Theme.headline).foregroundStyle(Theme.primaryText)
-            Text("Claude Code is watching the recording — this usually takes 30 s–2 min. You can keep working; you'll get a notification when it's ready to review.")
+            Text("\(flow.synthesisRuntimeDisplayName) is watching the recording — this usually takes 30 s–2 min. You can keep working; you'll get a notification when it's ready to review.")
                 .font(Theme.body).foregroundStyle(Theme.secondaryText).multilineTextAlignment(.center)
                 .frame(maxWidth: 420)
         }

@@ -20,7 +20,7 @@ Known V1 gaps:
 
 - Developer ID notarization is not finished; local builds are signed for development.
 - Hosted Mengo account endpoints are optional in OSS preview builds; use local preview mode to run the app without a hosted account.
-- Codex runtime support is present and has a scripted CLI/MCP smoke check; the full in-app record-to-skill path still needs manual smoke testing before it is advertised as the default path.
+- Codex runtime support has passed scripted CLI/MCP smoke testing and a local in-app record-to-synthesize-to-review persistence smoke; the full clean-user manual matrix still needs to pass before Codex is advertised as the default path.
 - Legacy ScreenpipeMenu and ScreenpipeFlow targets still exist in the repository while the V1 package is being cleaned up.
 
 ## Requirements

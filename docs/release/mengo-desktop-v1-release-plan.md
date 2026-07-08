@@ -37,10 +37,11 @@ Completed or improved:
 - Added `scripts/smoke-codex-runtime.sh` for repeatable Codex CLI/MCP/final-message smoke testing.
 - Verified `@screenpipe/cli-darwin-x64` package availability in npm, but documented the preview release as Apple Silicon-only until an Intel-built artifact is smoke-tested on Intel hardware.
 - Prepared a draft `v0.1.0-preview` prerelease with `MengoDesktop-macos-arm64.zip` attached; it remains unpublished.
+- Fixed the in-app Codex smoke failure where Codex reported the parent skills directory plus a slug, causing Review to look for `SKILL.md` in the parent directory.
 
 Current verification:
 
-- `swift test` passed: 186 tests, 0 failures.
+- `swift test` passed: 187 tests, 0 failures.
 - `./build-mengo.sh` passed.
 - `codesign --verify --deep --strict --verbose=2 MengoDesktop.app` passed.
 - `MengoDesktop.app/Contents/MacOS/MengoDesktop` and `Contents/Helpers/screenpipe` both report `arm64` in the latest local artifact.
@@ -48,16 +49,17 @@ Current verification:
 - GitHub Actions macOS `build-test` passes on the V1 readiness PR.
 - Current local keychain has an Apple Development signing identity only; Developer ID Application certificate and notarytool credentials are still required to complete notarization.
 - Codex CLI scripted preflight passes locally after adding `screenpipe` MCP: `codex-cli 0.143.0`, `codex mcp list` includes `screenpipe`, and `codex exec --output-last-message` writes the final JSON line Mengo parses.
+- Local in-app Codex smoke passed through record -> synthesize -> review -> persist: Codex generated `~/.claude/skills/record-mengo-flow-skill/`, Review loaded `SKILL.md` from the slug directory, and the library entry persisted `file:///Users/kylebell/.claude/skills/record-mengo-flow-skill/`.
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
 - Architecture support status: `build-mengo.sh` supports host-specific `arm64` and `x86_64` packaging; the current local artifact and preview notes are Apple Silicon-only because Intel hardware smoke is still missing.
-- Draft release asset digest matches local checksum: `sha256:81b08881c1e2dbb073cfcb283f6fcb6136059fb3f143b2d15be26d2a5434ec4c`.
+- Latest local release asset checksum after the Codex path fix: `sha256:3fcde87a7f51509e7e9ca84c4bb98a0565f8d3f0be2b9ff984ab24bc879b5a84`. The draft release asset still needs to be replaced with this rebuilt zip.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.
 
 Still open:
 
 - Developer ID signing and notarization.
 - Hosted account strategy beyond local preview mode.
-- Full Codex runtime manual app smoke test.
+- Broken-Codex setup manual error smoke.
 - Manual app smoke matrix on a clean user account.
 - Legacy target strategy after V1: keep legacy targets in the package for the preview because full CI is now green, then move or remove if they continue to create maintenance noise.
 
