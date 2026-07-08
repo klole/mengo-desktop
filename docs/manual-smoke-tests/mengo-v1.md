@@ -42,10 +42,20 @@ Run this checklist before publishing a V1 or V1-preview release.
 
 ## Codex Runtime
 
+- [x] Scripted preflight: `codex --version` works locally (`codex-cli 0.143.0`).
+- [x] Scripted preflight: `codex mcp list` includes `screenpipe`.
+- [x] Scripted preflight: `codex exec ... --output-last-message <file>` writes the final JSON line Mengo parses.
 - [ ] Select Codex in Settings.
 - [ ] Confirm preflight detects the Codex executable.
 - [ ] Complete record -> synthesize -> review -> save.
 - [ ] Break Codex setup and confirm the error mentions Codex.
+
+Repeat the scripted preflight with:
+
+```bash
+scripts/smoke-codex-runtime.sh
+MENGO_CODEX_SMOKE_RUN_MODEL=1 scripts/smoke-codex-runtime.sh
+```
 
 ## Claude Code Runtime
 

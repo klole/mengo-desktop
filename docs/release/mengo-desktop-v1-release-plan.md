@@ -34,6 +34,7 @@ Completed or improved:
 - Moved the ScreenpipeFlow synthesis prompt into a target-local SwiftPM resource path while keeping the app-bundle resource for Mengo Desktop packaging.
 - Fixed Swift 6 XCTest actor-isolation issues in legacy manifest writer tests.
 - Added `scripts/notarize-mengo.sh` and `MENGO_SIGN_FOR_NOTARIZATION=1` packaging support for Developer ID hardened-runtime signing plus Apple notarization.
+- Added `scripts/smoke-codex-runtime.sh` for repeatable Codex CLI/MCP/final-message smoke testing.
 
 Current verification:
 
@@ -44,13 +45,14 @@ Current verification:
 - `spctl --assess --type execute -vv MengoDesktop.app` still rejects the app because the build is ad-hoc/self-signed and not notarized.
 - GitHub Actions macOS `build-test` passes on the V1 readiness PR.
 - Current local keychain has an Apple Development signing identity only; Developer ID Application certificate and notarytool credentials are still required to complete notarization.
+- Codex CLI scripted preflight passes locally after adding `screenpipe` MCP: `codex-cli 0.143.0`, `codex mcp list` includes `screenpipe`, and `codex exec --output-last-message` writes the final JSON line Mengo parses.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.
 
 Still open:
 
 - Developer ID signing and notarization.
 - Hosted account strategy beyond local preview mode.
-- Codex runtime manual smoke test.
+- Full Codex runtime manual app smoke test.
 - Manual app smoke matrix on a clean user account.
 - Legacy target strategy after V1: keep legacy targets in the package for the preview because full CI is now green, then move or remove if they continue to create maintenance noise.
 
