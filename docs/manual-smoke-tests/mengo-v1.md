@@ -35,7 +35,8 @@ MENGO_REQUIRE_MANUAL_SMOKE_COMPLETE=1 scripts/release-readiness-status.sh
 - [ ] Search recent memory.
 - [ ] Pause recording.
 - [ ] Resume recording.
-- [ ] Confirm errors are understandable if the screenpipe helper is unavailable.
+- [x] Unit coverage: `RecorderControllerTests/test_start_whenBinaryMissing_setsError` verifies missing bundled screenpipe helper startup enters an error state.
+- [ ] Confirm the screenpipe-helper-unavailable error is understandable in the GUI.
 
 ## Flow
 
@@ -104,10 +105,10 @@ scripts/smoke-clean-generated-skill.sh
 
 ## Failure States
 
-- [ ] Missing runtime executable.
-- [ ] Missing MCP setup.
+- [x] Missing runtime executable: `FlowControllerTests/test_preflight_runtimeMissing` and `test_preflight_codexRuntimeMissing` verify the preflight failure.
+- [x] Missing MCP setup: `FlowControllerTests/test_preflight_codexMCPMissing`, alert-content tests, and `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` verify the failure path and setup command.
 - [ ] Screen Recording denied.
 - [ ] Microphone denied.
 - [ ] Skills output directory not writable.
 - [ ] Duplicate skill name.
-- [ ] Network unavailable if hosted account is enabled.
+- [x] Network unavailable if hosted account is enabled: `AccountStoreTests/test_sendMagicLink_networkFail_staysSignedOut_setsError` and `test_refresh_networkFail_keepsCachedSignedIn` verify hosted-account network failure behavior.

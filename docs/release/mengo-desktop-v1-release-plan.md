@@ -79,7 +79,7 @@ Current verification:
 - Latest local release asset checksum and published release asset digest: `sha256:f96e3e8299a0c3e8a405a21a1077fc8b4f54576cf2cbdd1803e2ab6a6bc98423`.
 - Preview release downloads: 0 after replacing the preview asset.
 - Codex for OSS packet validation passes: answer character counts match the source text and stay under 500 characters, live GitHub/release metrics match the packet, and notarization/adoption caveats remain present.
-- Manual smoke status is now machine-summarized: `scripts/manual-smoke-status.sh` reports the current checklist as 21/65 complete, with open GUI/manual gates listed by section. `scripts/manual-smoke-status.sh --require-complete` fails until the full clean-user checklist is complete.
+- Manual smoke status is now machine-summarized: `scripts/manual-smoke-status.sh` reports the current checklist as 25/66 complete, with open GUI/manual gates listed by section. `scripts/manual-smoke-status.sh --require-complete` fails until the full clean-user checklist is complete.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.
 
 Still open:
