@@ -53,8 +53,9 @@ Run this checklist before publishing a V1 or V1-preview release.
 - [x] Re-open generated skill from Library into Flow Review, Save, and confirm the UI exits review back to Flow idle.
 - [x] Scripted negative preflight: `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` fails through the missing-screenpipe-MCP path and prints the Codex setup command.
 - [x] Scripted generated-skill file smoke: `scripts/smoke-generated-skill.sh` verifies the generated skill directory, `SKILL.md`, and valid `flow.json`.
+- [x] Optional model-backed generated-skill read smoke: `MENGO_SKILL_SMOKE_RUN_MODEL=1 scripts/smoke-generated-skill.sh` returned `{"status":"ok","readSkill":true,"readFlow":true}`.
 - [ ] Break Codex setup in the app and confirm the GUI alert mentions Codex/screenpipe MCP.
-- [ ] Optional model-backed generated-skill read smoke: `MENGO_SKILL_SMOKE_RUN_MODEL=1 scripts/smoke-generated-skill.sh`.
+- [ ] Full generated-skill invocation from the selected runtime.
 
 Repeat the scripted preflight with:
 
