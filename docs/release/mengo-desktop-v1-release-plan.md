@@ -34,6 +34,7 @@ Completed or improved:
 - Moved the ScreenpipeFlow synthesis prompt into a target-local SwiftPM resource path while keeping the app-bundle resource for Mengo Desktop packaging.
 - Fixed Swift 6 XCTest actor-isolation issues in legacy manifest writer tests.
 - Added `scripts/notarize-mengo.sh` and `MENGO_SIGN_FOR_NOTARIZATION=1` packaging support for Developer ID hardened-runtime signing plus Apple notarization.
+- Hardened `scripts/notarize-mengo.sh` with help/argument parsing, required-command checks, strict Developer ID plus hardened-runtime verification, final zip extraction validation, stapler validation, Gatekeeper assessment, and final SHA-256 output.
 - Added `scripts/smoke-codex-runtime.sh` for repeatable Codex CLI/MCP/final-message smoke testing.
 - Added `scripts/smoke-generated-skill.sh` for repeatable generated-skill file validation, with optional Codex read and invocation smoke.
 - Added `scripts/smoke-clean-generated-skill.sh` for repeatable clean generated-skill path invocation by copying the generated skill into a temporary `.claude/skills` home and making Codex invoke the copied skill.
@@ -58,7 +59,7 @@ Current verification:
 - `MengoDesktop.app/Contents/MacOS/MengoDesktop` and `Contents/Helpers/screenpipe` both report `arm64` in the latest local artifact.
 - `spctl --assess --type execute -vv MengoDesktop.app` still rejects the app because the build is ad-hoc/self-signed and not notarized.
 - GitHub Actions macOS `build-test` passes on the V1 readiness PR.
-- Current local keychain has an Apple Development signing identity only; `scripts/notarize-mengo.sh --check` reports that a Developer ID Application certificate and notarytool credentials are still required to complete notarization.
+- Current local keychain has an Apple Development signing identity only; `scripts/notarize-mengo.sh --check` reports that a Developer ID Application certificate and notarytool credentials are still required to complete notarization. The script now verifies Developer ID plus hardened runtime, stapled app validation, extracted-final-zip Gatekeeper assessment, and final SHA-256 output once credentials are present.
 - Codex CLI scripted preflight passes locally after adding `screenpipe` MCP: `codex-cli 0.143.0`, `codex mcp list` includes `screenpipe`, and `codex exec --output-last-message` writes the final JSON line Mengo parses.
 - Codex scripted negative smoke passes: `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` simulates a missing screenpipe MCP and verifies the setup command is printed.
 - Broken Codex/screenpipe MCP alert content has unit coverage: `FlowControllerTests` verifies the alert names Codex, includes `codex mcp add screenpipe -- npx -y screenpipe-mcp`, and exposes "Copy command" / "OK" actions.

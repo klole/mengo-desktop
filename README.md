@@ -86,6 +86,17 @@ scripts/release-readiness-status.sh
 MENGO_RELEASE_DOWNLOAD_SMOKE=1 scripts/release-readiness-status.sh
 ```
 
+For a notarized release candidate after installing a Developer ID Application certificate and configuring a notarytool profile:
+
+```bash
+scripts/notarize-mengo.sh --check
+MENGO_SIGNING_IDENTITY="Developer ID Application: <name> (<team-id>)" \
+MENGO_NOTARY_PROFILE=mengo-notary \
+scripts/notarize-mengo.sh
+```
+
+The notarization script verifies Developer ID signing plus hardened runtime, submits and staples the app, re-zips it, extracts that final zip with `ditto`, validates the stapled extracted app, runs Gatekeeper assessment, and prints the final SHA-256 checksum.
+
 The explicitly non-notarized preview release has been published. To rerun the guarded publish flow after preparing a new draft:
 
 ```bash
