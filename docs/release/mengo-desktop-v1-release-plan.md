@@ -75,7 +75,7 @@ Current verification:
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
 - Architecture support status: `build-mengo.sh` supports host-specific `arm64` and `x86_64` packaging; the current local artifact and preview notes are Apple Silicon-only because Intel hardware smoke is still missing.
 - Latest local release asset checksum and published release asset digest: `sha256:2fc1238cc83c94cf79ce7b0e5732e587676e58e0b0d4b39a529f7c427a970327`.
-- Preview release downloads: 0 after replacing the preview asset.
+- Preview release downloads: 1 after the latest published-asset smoke.
 - Codex for OSS packet validation passes: answer character counts match the source text and stay under 500 characters, live GitHub/release metrics match the packet, and notarization/adoption caveats remain present.
 - Manual smoke status is now machine-summarized: `scripts/manual-smoke-status.sh` reports the current checklist as 17/61 complete, with open GUI/manual gates listed by section. `scripts/manual-smoke-status.sh --require-complete` fails until the full clean-user checklist is complete.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.

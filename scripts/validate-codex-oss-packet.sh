@@ -70,6 +70,8 @@ for title in ("Why This Repository Qualifies", "API Credit Usage", "Anything Els
 
 visibility = "private" if repo.get("isPrivate") else "public"
 asset = (release.get("assets") or [{}])[0]
+download_count = asset.get("downloadCount")
+download_word = "download" if download_count == 1 else "downloads"
 open_prs = repo.get("pullRequests", {}).get("totalCount")
 ci_checks = pr.get("statusCheckRollup") or []
 successful_check_names = [check.get("name") for check in ci_checks if check.get("conclusion") == "SUCCESS"]
@@ -89,7 +91,7 @@ expected_lines = [
     f"- Release URL: `{release.get('url')}`.",
     f"- Release asset: `{asset.get('name')}`.",
     f"- Release asset digest: `{asset.get('digest')}`.",
-    f"- Release downloads: {asset.get('downloadCount')}.",
+    f"- Release downloads: {download_count}.",
 ]
 
 for line in expected_lines:
@@ -97,7 +99,7 @@ for line in expected_lines:
 
 do_not_claim_downloads = (
     f"- Do not claim broad adoption; current metrics are {repo.get('stargazerCount')} stars, "
-    f"{repo.get('forkCount')} forks, and {asset.get('downloadCount')} release downloads."
+    f"{repo.get('forkCount')} forks, and {download_count} release {download_word}."
 )
 require(do_not_claim_downloads in packet, f"missing or stale Do Not Claim downloads line: {do_not_claim_downloads}")
 
