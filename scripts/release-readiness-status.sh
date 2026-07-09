@@ -96,6 +96,11 @@ if [ "${MENGO_SKILL_SMOKE_RUN_MODEL:-0}" = "1" ]; then
 else
     echo "SKIP: set MENGO_SKILL_SMOKE_RUN_MODEL=1 to have Codex read the generated skill"
 fi
+if [ "${MENGO_CLEAN_SKILL_SMOKE:-0}" = "1" ]; then
+    "$ROOT/scripts/smoke-clean-generated-skill.sh"
+else
+    echo "SKIP: set MENGO_CLEAN_SKILL_SMOKE=1 to copy the generated skill into a clean skills home and invoke it"
+fi
 pass "Generated skill smoke"
 
 echo
@@ -153,7 +158,7 @@ cat <<'EOF'
 Remaining manual/external gates:
 - Clean-user GUI smoke matrix.
 - In-app broken-Codex/MCP GUI alert smoke.
-- Clean-user generated-skill invocation from the selected runtime.
+- Clean-user generated-skill invocation from the selected runtime in the app.
 EOF
 if [ "$EXPECT_RELEASE_DRAFT" = "1" ]; then
     cat <<'EOF'
