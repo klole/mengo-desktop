@@ -98,10 +98,12 @@ pass "local zip checksum matches release notes: $LOCAL_SHA"
 if [ "${MENGO_APP_LAUNCH_SMOKE:-0}" = "1" ]; then
     echo
     echo "==> App launch smoke"
-    "$ROOT/scripts/smoke-app-launch.sh"
-    pass "app launch smoke"
+    for account_mode in ${MENGO_APP_LAUNCH_ACCOUNT_MODES:-signed-out free pro}; do
+        MENGO_APP_LAUNCH_ACCOUNT_MODE="$account_mode" "$ROOT/scripts/smoke-app-launch.sh"
+    done
+    pass "app launch smoke for account modes: ${MENGO_APP_LAUNCH_ACCOUNT_MODES:-signed-out free pro}"
 else
-    echo "SKIP: set MENGO_APP_LAUNCH_SMOKE=1 to launch the app in local-preview mode without starting capture"
+    echo "SKIP: set MENGO_APP_LAUNCH_SMOKE=1 to launch the app in signed-out/free/pro account modes without starting capture"
 fi
 
 if [ "${MENGO_RELEASE_DOWNLOAD_SMOKE:-0}" = "1" ]; then
