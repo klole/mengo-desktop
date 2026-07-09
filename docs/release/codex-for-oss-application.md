@@ -1,55 +1,73 @@
 # Codex for OSS Application Notes
 
-Use this after the public V1 preview release is published and the GitHub repo metadata is current.
+Use this after the preview release is published and final metrics are refreshed. The Codex for OSS form asks for these fields and limits the three narrative answers to 500 characters.
 
-## Repository
+## Copy-Ready Fields
+
+- GitHub username: `klole`
+- GitHub repository URL: `https://github.com/klole/mengo-desktop`
+- Maintainer role: `Primary maintainer`
+- Interested in: `API credits for my project`; optionally also `Codex Security` after security review scope is clear.
+- OpenAI Organization ID: fill from the OpenAI platform org settings before submitting.
+
+## Why This Repository Qualifies
 
 ```text
-https://github.com/klole/mengo-desktop
+Mengo Desktop is an open-source macOS app for local AI memory and repeatable workflow capture. It turns maintainer workflows into reusable Codex/Claude-style skills, with public docs, CI, issue triage, release notes, and a V1 preview pipeline. It is early, but directly targets OSS maintenance automation.
 ```
 
-## Role
+Character count: 305.
 
-Primary maintainer.
+## API Credit Usage
 
-## Qualification Answer
+```text
+I would use API credits for maintainer automation: PR review, release checklist generation, security-oriented review, docs maintenance, and evaluating Mengo's skill synthesis loop. Credits would also test Codex workflows that convert real maintainer actions into reusable skills for this open-source repo.
+```
 
-Mengo Desktop is an open-source macOS app that turns local screen/audio workflow demonstrations into reusable AI skills for Codex/Claude-style agents. It builds on the screenpipe local recording ecosystem and targets maintainer automation: capturing repeated release, triage, review, and repo workflows so they can be replayed reliably. I am the primary maintainer and am preparing its first clean OSS V1 release.
+Character count: 305.
 
-## API Credit Usage Answer
+## Anything Else
 
-I would use API credits for core maintainer workflows: automated PR review, release checklist generation, security-oriented review, docs maintenance, and improving Mengo's skill synthesis/evaluation loop. Credits would also help test Codex-based workflows that convert maintainer actions into reusable skills, directly improving the open-source project.
+```text
+The repo is early but active: PR #8 prepares a clean V1 preview with MIT license, security/contributing docs, macOS CI, local preview mode, Codex runtime smoke scripts, and a draft release artifact. Current public metrics are small, so the case is ecosystem relevance and active maintenance rather than adoption.
+```
 
-## Additional Context Answer
+Character count: 312.
 
-Mengo is early, but it is directly aligned with Codex maintainer workflows: it helps capture how maintainers actually work and turn those actions into reusable automation. The V1 plan includes public docs, license/security policy, CI, preview releases, and Codex runtime smoke tests.
+## Current Facts
 
-## Facts to Fill Before Submitting
+- Repository: public.
+- Stars: 0 as of the latest GitHub check.
+- Forks: 0 as of the latest GitHub check.
+- Open issues: 4.
+- Open PRs: 1, draft PR #8.
+- CI: macOS `build-test` passes on PR #8.
+- Draft release: `v0.1.0-preview`, unpublished.
+- Draft asset: `MengoDesktop-macos-arm64.zip`.
+- Draft asset checksum: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.
+- Release downloads: 0 while draft; refresh after publication.
+- Codex smoke: positive CLI/MCP smoke, final-message smoke, missing-MCP negative smoke, in-app record -> synthesize -> review persistence smoke, and Library -> Review -> Save smoke have passed.
+- Notarization: scripted but not complete; Developer ID Application certificate and notarytool profile still required.
 
-- Current star count: 0 as of 2026-07-08.
-- Current fork count: 0 as of 2026-07-08.
-- Current release tag: existing `v1.0.0` release is pre-cleanup and should not be used as the Mengo Desktop V1 evidence; a draft `v0.1.0-preview` prerelease is prepared but not published.
-- Release download count: 0 on the draft `MengoDesktop-macos-arm64.zip` asset; fill again after publication.
-- Draft asset checksum after the Library review-navigation fix: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.
-- CI status: macOS `build-test` passes on draft PR #8; re-check the latest branch head immediately before applying.
-- Draft PR: https://github.com/klole/mengo-desktop/pull/8
-- Draft release: https://github.com/klole/mengo-desktop/releases/tag/untagged-1364ef715b4b6741d7dd
-- Demo video/GIF: `docs/assets/mengo-desktop-preview.gif` exists; replace with a real record-to-skill walkthrough after the full app smoke passes.
-- Codex runtime smoke result: scripted CLI/MCP/final-message smoke passed locally with `codex-cli 0.143.0`; scripted missing-MCP negative smoke prints the Codex setup command; local in-app Codex record-to-synthesize-to-review persistence smoke passed after normalizing parent output directories to the generated skill slug directory; Library re-open -> Review -> Save UI smoke passed after wiring Library review navigation to switch back to Flow.
-- Notarization status: notarization path is scripted, but a Developer ID Application certificate and notarytool profile are still required.
+## Submission Gate
+
+Do not submit until one of these is true:
+
+- `v0.1.0-preview` is published and explicitly labeled non-notarized, with clean-user smoke status recorded; or
+- a Developer ID signed/notarized build is published and Gatekeeper passes.
+
+Before submitting, refresh:
+
+- star/fork counts,
+- release URL,
+- release download count,
+- latest CI status,
+- final manual smoke status,
+- OpenAI Organization ID.
 
 ## Do Not Claim
 
-- Do not claim broad adoption unless the public repo metrics support it.
+- Do not claim broad adoption unless repo metrics change.
 - Do not use upstream screenpipe stars as Mengo Desktop stars.
 - Do not claim notarization until verified.
-- Do not claim Codex as the default runtime until the broken-runtime error path and full clean-user manual matrix pass.
-
-## Stronger Final Version Should Mention
-
-- Published V1 preview release.
-- Passing CI.
-- Public roadmap/issues.
-- Security and privacy docs.
-- Local preview mode that lets OSS users run without hosted backend.
-- Exact ways Codex credits will improve maintainer workflows in this repo.
+- Do not claim Codex as the default runtime until the in-app broken-runtime alert and full clean-user manual matrix pass.
