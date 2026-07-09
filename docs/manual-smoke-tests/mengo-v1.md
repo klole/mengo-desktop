@@ -109,6 +109,6 @@ scripts/smoke-clean-generated-skill.sh
 - [x] Missing MCP setup: `FlowControllerTests/test_preflight_codexMCPMissing`, alert-content tests, and `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` verify the failure path and setup command.
 - [ ] Screen Recording denied.
 - [ ] Microphone denied.
-- [ ] Skills output directory not writable.
-- [ ] Duplicate skill name.
+- [x] Skills output directory not writable: `FlowControllerTests/test_save_unwritableOutputDirectory_surfacesErrorAndKeepsReview` verifies save failure surfaces an error and keeps the generated review directory intact.
+- [x] Duplicate skill name: `FlowControllerTests/test_save_duplicateSkillName_usesNextAvailableSlug` verifies save chooses the next available `-2` slug without overwriting the existing skill.
 - [x] Network unavailable if hosted account is enabled: `AccountStoreTests/test_sendMagicLink_networkFail_staysSignedOut_setsError` and `test_refresh_networkFail_keepsCachedSignedIn` verify hosted-account network failure behavior.

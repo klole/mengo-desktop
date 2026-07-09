@@ -54,7 +54,7 @@ Character count: 316.
 - Preview release: `v0.1.0-preview`, published prerelease.
 - Current release URL: `https://github.com/klole/mengo-desktop/releases/tag/v0.1.0-preview`.
 - Release asset: `MengoDesktop-macos-arm64.zip`.
-- Release asset checksum: `sha256:f96e3e8299a0c3e8a405a21a1077fc8b4f54576cf2cbdd1803e2ab6a6bc98423`.
+- Release asset checksum: `sha256:757dff77b58e78f6e4080069eeb12ff0c114853e62ebfd8096d517924b47494d`.
 - Release downloads: 0 as of the latest GitHub check after replacing the preview asset.
 - Codex smoke: positive CLI/MCP smoke, final-message smoke, missing-MCP negative smoke, generated-skill file/read/invocation smoke, in-app record -> synthesize -> review persistence smoke, and Library -> Review -> Save smoke have passed.
 - Notarization: scripted but not complete; Developer ID Application certificate and notarytool profile still required.

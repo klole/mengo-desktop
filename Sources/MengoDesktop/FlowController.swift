@@ -426,7 +426,13 @@ final class FlowController {
         var finalDir = dir
         if desiredSlug != dir.lastPathComponent {
             let target = parent.appendingPathComponent(desiredSlug)
-            if (try? FileManager.default.moveItem(at: dir, to: target)) != nil { finalDir = target }
+            do {
+                try FileManager.default.moveItem(at: dir, to: target)
+                finalDir = target
+            } catch {
+                flowState = .error("Couldn't save skill edits: \(error)")
+                return
+            }
         }
         do {
             try persistReviewEdits(in: finalDir, name: trimmed.isEmpty ? finalDir.lastPathComponent : trimmed,

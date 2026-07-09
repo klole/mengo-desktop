@@ -31,7 +31,7 @@ scripts/validate-codex-oss-packet.sh
 - Release: `v0.1.0-preview`, published prerelease.
 - Release URL: `https://github.com/klole/mengo-desktop/releases/tag/v0.1.0-preview`.
 - Release asset: `MengoDesktop-macos-arm64.zip`.
-- Release asset digest: `sha256:f96e3e8299a0c3e8a405a21a1077fc8b4f54576cf2cbdd1803e2ab6a6bc98423`.
+- Release asset digest: `sha256:757dff77b58e78f6e4080069eeb12ff0c114853e62ebfd8096d517924b47494d`.
 - Release downloads: 0.
 - Notarization: not complete; the preview is explicitly non-notarized.
 

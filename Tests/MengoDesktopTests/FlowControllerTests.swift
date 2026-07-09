@@ -284,6 +284,63 @@ final class FlowControllerTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: oldDir.path))
     }
 
+    func test_save_duplicateSkillName_usesNextAvailableSlug() async throws {
+        var t = Date(timeIntervalSince1970: 1_000_000)
+        let parent = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("skills-\(UUID().uuidString)")
+        let oldDir = parent.appendingPathComponent("old-slug")
+        let existingDir = parent.appendingPathComponent("new-name")
+        try FileManager.default.createDirectory(at: oldDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: existingDir, withIntermediateDirectories: true)
+        try """
+        ---
+        name: old-slug
+        description: old
+        ---
+        """.write(to: oldDir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        try """
+        ---
+        name: New Name
+        description: existing
+        ---
+        """.write(to: existingDir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let c = makeController(synthesis: StubSynthesis(result: .success(outputDir: oldDir, slug: "old-slug")), now: { t })
+        await c.start(); t = Date(timeIntervalSince1970: 1_000_030); await c.stop()
+
+        c.save(name: "New Name", description: "desc", parameters: [])
+
+        XCTAssertEqual(c.flowState, .idle)
+        XCTAssertEqual(c.library.first?.slug, "new-name-2")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: parent.appendingPathComponent("new-name-2/SKILL.md").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: existingDir.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: oldDir.path))
+    }
+
+    func test_save_unwritableOutputDirectory_surfacesErrorAndKeepsReview() async throws {
+        var t = Date(timeIntervalSince1970: 1_000_000)
+        let parent = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("skills-\(UUID().uuidString)")
+        let oldDir = parent.appendingPathComponent("old-slug")
+        try FileManager.default.createDirectory(at: oldDir, withIntermediateDirectories: true)
+        try """
+        ---
+        name: old-slug
+        description: old
+        ---
+        """.write(to: oldDir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let c = makeController(synthesis: StubSynthesis(result: .success(outputDir: oldDir, slug: "old-slug")), now: { t })
+        await c.start(); t = Date(timeIntervalSince1970: 1_000_030); await c.stop()
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: parent.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path) }
+
+        c.save(name: "New Name", description: "desc", parameters: [])
+
+        guard case .error(let message) = c.flowState else {
+            return XCTFail("expected save error, got \(c.flowState)")
+        }
+        XCTAssertTrue(message.contains("Couldn't save skill edits"))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: oldDir.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: parent.appendingPathComponent("new-name").path))
+    }
+
     // MARK: recovery
 
     func test_dumpRecovery_thenCheck_findsIt() async {

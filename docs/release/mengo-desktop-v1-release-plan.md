@@ -76,10 +76,10 @@ Current verification:
 - `MENGO_RELEASE_DOWNLOAD_SMOKE=1 MENGO_RELEASE_ASSET=MengoDesktop-macos-arm64.zip scripts/release-readiness-status.sh` passes on branch `v1-release-readiness`: local tests with timeout, codesign, checksum, published-asset download smoke, expected non-notarized Gatekeeper rejection, Codex positive/negative smoke, exact PR-head status, and release asset digest are green.
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
 - Architecture support status: `build-mengo.sh` supports host-specific `arm64` and `x86_64` packaging; the current local artifact and preview notes are Apple Silicon-only because Intel hardware smoke is still missing.
-- Latest local release asset checksum and published release asset digest: `sha256:f96e3e8299a0c3e8a405a21a1077fc8b4f54576cf2cbdd1803e2ab6a6bc98423`.
+- Latest local release asset checksum and published release asset digest: `sha256:757dff77b58e78f6e4080069eeb12ff0c114853e62ebfd8096d517924b47494d`.
 - Preview release downloads: 0 after replacing the preview asset.
 - Codex for OSS packet validation passes: answer character counts match the source text and stay under 500 characters, live GitHub/release metrics match the packet, and notarization/adoption caveats remain present.
-- Manual smoke status is now machine-summarized: `scripts/manual-smoke-status.sh` reports the current checklist as 25/66 complete, with open GUI/manual gates listed by section. `scripts/manual-smoke-status.sh --require-complete` fails until the full clean-user checklist is complete.
+- Manual smoke status is now machine-summarized: `scripts/manual-smoke-status.sh` reports the current checklist as 27/66 complete, with open GUI/manual gates listed by section. `scripts/manual-smoke-status.sh --require-complete` fails until the full clean-user checklist is complete.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.
 
 Still open:
