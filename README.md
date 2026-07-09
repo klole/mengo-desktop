@@ -83,6 +83,7 @@ For a terminal-only release status check against the current local artifact and 
 
 ```bash
 scripts/release-readiness-status.sh
+MENGO_APP_LAUNCH_SMOKE=1 scripts/release-readiness-status.sh
 MENGO_RELEASE_DOWNLOAD_SMOKE=1 scripts/release-readiness-status.sh
 ```
 

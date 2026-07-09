@@ -16,6 +16,20 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(s.startRecordingOnLaunch)
         XCTAssertFalse(s.openAtLogin)
     }
+    func test_disableStartRecordingOnLaunchEnv_changesFreshDefault() {
+        let s = SettingsStore(defaults: defaults(),
+                              loginItem: StubLoginItem(),
+                              env: ["MENGO_DISABLE_START_RECORDING_ON_LAUNCH": "1"])
+        XCTAssertFalse(s.startRecordingOnLaunch)
+    }
+    func test_disableStartRecordingOnLaunchEnv_doesNotOverrideSavedPreference() {
+        let d = defaults()
+        d.set(true, forKey: "startRecordingOnLaunch")
+        let s = SettingsStore(defaults: d,
+                              loginItem: StubLoginItem(),
+                              env: ["MENGO_DISABLE_START_RECORDING_ON_LAUNCH": "1"])
+        XCTAssertTrue(s.startRecordingOnLaunch)
+    }
     func test_persistsRuntimeAndStartFlag() {
         let d = defaults()
         let s1 = SettingsStore(defaults: d, loginItem: StubLoginItem())

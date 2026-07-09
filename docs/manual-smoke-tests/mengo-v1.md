@@ -17,7 +17,8 @@ MENGO_REQUIRE_MANUAL_SMOKE_COMPLETE=1 scripts/release-readiness-status.sh
 ## Fresh Install
 
 - [x] Scripted clean-home check: `HOME=$(mktemp -d) swift test` passes with 186 tests, 0 failures.
-- [x] Latest local full test run after Codex broken-MCP alert coverage: `swift test` passes with 191 tests, 0 failures.
+- [x] Latest local full test run after Codex broken-MCP alert coverage: `swift test` passes with 193 tests, 0 failures.
+- [x] Scripted local-preview app launch smoke: `scripts/smoke-app-launch.sh` starts `MengoDesktop.app` with a temporary home, local preview enabled, capture disabled, confirms the launch log, and terminates the app cleanly.
 - [x] Scripted published-asset smoke: `MENGO_RELEASE_DOWNLOAD_SMOKE=1 scripts/release-readiness-status.sh` downloads the release zip, verifies checksum, extracts `MengoDesktop.app` with `ditto`, runs codesign verification, and confirms the expected non-notarized Gatekeeper rejection.
 - [ ] Move the app to `~/Applications`.
 - [ ] Launch from Finder.

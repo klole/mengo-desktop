@@ -34,11 +34,14 @@ final class SettingsStore {
 
     private enum Keys { static let runtime = "synthesisRuntime"; static let startRec = "startRecordingOnLaunch" }
 
-    init(defaults: UserDefaults = .standard, loginItem: LoginItemControlling = SMLoginItem()) {
+    init(defaults: UserDefaults = .standard,
+         loginItem: LoginItemControlling = SMLoginItem(),
+         env: [String: String] = ProcessInfo.processInfo.environment) {
         self.defaults = defaults
         self.loginItem = loginItem
         self.synthesisRuntime = (defaults.string(forKey: Keys.runtime)).flatMap(SynthesisRuntime.init(rawValue:)) ?? .claudeCode
-        self.startRecordingOnLaunch = defaults.object(forKey: Keys.startRec) as? Bool ?? true
+        let defaultStartRecording = env["MENGO_DISABLE_START_RECORDING_ON_LAUNCH"] == "1" ? false : true
+        self.startRecordingOnLaunch = defaults.object(forKey: Keys.startRec) as? Bool ?? defaultStartRecording
         AppDelegate.sharedSettings = self
     }
 
