@@ -8,6 +8,7 @@ RELEASE_NOTES="$ROOT/docs/release/v0.1.0-preview.md"
 REPO="${GITHUB_REPOSITORY:-klole/mengo-desktop}"
 PR_NUMBER="${MENGO_RELEASE_PR:-8}"
 RELEASE_TAG="${MENGO_RELEASE_TAG:-v0.1.0-preview}"
+EXPECT_RELEASE_DRAFT="${MENGO_EXPECT_RELEASE_DRAFT:-1}"
 
 fail() {
     echo "FAIL: $*" >&2
@@ -93,15 +94,24 @@ if command -v gh >/dev/null 2>&1; then
     fi
     pass "PR #$PR_NUMBER clean with successful checks"
 
-    RELEASE_STATE="$(gh release view "$RELEASE_TAG" --repo "$REPO" --json isDraft,isPrerelease,assets)"
+    RELEASE_STATE="$(gh release view "$RELEASE_TAG" --repo "$REPO" --json isDraft,isPrerelease,assets,url)"
     echo "$RELEASE_STATE"
-    if ! echo "$RELEASE_STATE" | grep -q '"isDraft":true'; then
-        fail "release $RELEASE_TAG is not draft"
+    if [ "$EXPECT_RELEASE_DRAFT" = "1" ]; then
+        if ! echo "$RELEASE_STATE" | grep -q '"isDraft":true'; then
+            fail "release $RELEASE_TAG is not draft"
+        fi
+    else
+        if ! echo "$RELEASE_STATE" | grep -q '"isDraft":false'; then
+            fail "release $RELEASE_TAG is still draft"
+        fi
+    fi
+    if ! echo "$RELEASE_STATE" | grep -q '"isPrerelease":true'; then
+        fail "release $RELEASE_TAG is not marked prerelease"
     fi
     if ! echo "$RELEASE_STATE" | grep -q "\"digest\":\"sha256:$LOCAL_SHA\""; then
-        fail "draft release asset digest does not match local checksum $LOCAL_SHA"
+        fail "release asset digest does not match local checksum $LOCAL_SHA"
     fi
-    pass "draft release asset digest matches local checksum"
+    pass "release asset digest matches local checksum"
 else
     echo "SKIP: gh not installed; GitHub PR/release checks not run"
 fi

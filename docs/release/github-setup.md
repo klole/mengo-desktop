@@ -60,6 +60,7 @@ Do not publish the preview release until:
 - `spctl --assess --type execute -vv MengoDesktop.app` result is documented.
 - `docs/release/v0.1.0-preview.md` checksum is regenerated from the final zip.
 - `scripts/release-readiness-status.sh` passes.
+- After publishing, `MENGO_EXPECT_RELEASE_DRAFT=0 scripts/release-readiness-status.sh` passes.
 - Manual smoke test status is recorded in `docs/manual-smoke-tests/mengo-v1.md`.
 
 ## Current Pull Request
