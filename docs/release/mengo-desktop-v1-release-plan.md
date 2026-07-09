@@ -35,6 +35,7 @@ Completed or improved:
 - Fixed Swift 6 XCTest actor-isolation issues in legacy manifest writer tests.
 - Added `scripts/notarize-mengo.sh` and `MENGO_SIGN_FOR_NOTARIZATION=1` packaging support for Developer ID hardened-runtime signing plus Apple notarization.
 - Added `scripts/smoke-codex-runtime.sh` for repeatable Codex CLI/MCP/final-message smoke testing.
+- Added `scripts/smoke-generated-skill.sh` for repeatable generated-skill file validation, with optional Codex read smoke.
 - Added `scripts/release-readiness-status.sh` for repeatable terminal release-gate checks.
 - Verified `@screenpipe/cli-darwin-x64` package availability in npm, but documented the preview release as Apple Silicon-only until an Intel-built artifact is smoke-tested on Intel hardware.
 - Prepared a draft `v0.1.0-preview` prerelease with `MengoDesktop-macos-arm64.zip` attached; it remains unpublished.
@@ -54,6 +55,7 @@ Current verification:
 - Current local keychain has an Apple Development signing identity only; Developer ID Application certificate and notarytool credentials are still required to complete notarization.
 - Codex CLI scripted preflight passes locally after adding `screenpipe` MCP: `codex-cli 0.143.0`, `codex mcp list` includes `screenpipe`, and `codex exec --output-last-message` writes the final JSON line Mengo parses.
 - Codex scripted negative smoke passes: `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` simulates a missing screenpipe MCP and verifies the setup command is printed.
+- Generated-skill file smoke passes: `scripts/smoke-generated-skill.sh` verifies the generated skill directory, `SKILL.md`, and valid `flow.json`.
 - Local in-app Codex smoke passed through record -> synthesize -> review -> persist: Codex generated `~/.claude/skills/record-mengo-flow-skill/`, Review loaded `SKILL.md` from the slug directory, and the library entry persisted `file:///Users/kylebell/.claude/skills/record-mengo-flow-skill/`.
 - Local Library -> Review -> Save UI smoke passed on the generated Codex skill: reopening from Library navigated to Flow review, Save exited review back to Flow idle, and the library entry stayed pointed at the slug directory.
 - `scripts/release-readiness-status.sh` passes on branch `v1-release-readiness`: local tests, codesign, checksum, expected non-notarized Gatekeeper rejection, Codex positive/negative smoke, PR status, and draft release asset digest are green.
@@ -68,6 +70,7 @@ Still open:
 - Hosted account strategy beyond local preview mode.
 - Broken-Codex setup manual GUI alert smoke.
 - Manual app smoke matrix on a clean user account.
+- Full generated-skill invocation from the selected runtime.
 - Legacy target strategy after V1: keep legacy targets in the package for the preview because full CI is now green, then move or remove if they continue to create maintenance noise.
 
 The relevant application signals are:

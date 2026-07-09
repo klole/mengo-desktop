@@ -5,7 +5,7 @@ Run this checklist before publishing a V1 or V1-preview release.
 ## Fresh Install
 
 - [x] Scripted clean-home check: `HOME=$(mktemp -d) swift test` passes with 186 tests, 0 failures.
-- [x] Latest local full test run after Codex path normalization: `swift test` passes with 187 tests, 0 failures.
+- [x] Latest local full test run after Codex path normalization: `swift test` passes with 189 tests, 0 failures.
 - [ ] Download the release zip.
 - [ ] Verify checksum if one is published.
 - [ ] Unzip `MengoDesktop.app`.
@@ -52,7 +52,9 @@ Run this checklist before publishing a V1 or V1-preview release.
 - [x] Complete record -> synthesize -> review. Local smoke created `~/.claude/skills/record-mengo-flow-skill/` and persisted the library path to that slug directory.
 - [x] Re-open generated skill from Library into Flow Review, Save, and confirm the UI exits review back to Flow idle.
 - [x] Scripted negative preflight: `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` fails through the missing-screenpipe-MCP path and prints the Codex setup command.
+- [x] Scripted generated-skill file smoke: `scripts/smoke-generated-skill.sh` verifies the generated skill directory, `SKILL.md`, and valid `flow.json`.
 - [ ] Break Codex setup in the app and confirm the GUI alert mentions Codex/screenpipe MCP.
+- [ ] Optional model-backed generated-skill read smoke: `MENGO_SKILL_SMOKE_RUN_MODEL=1 scripts/smoke-generated-skill.sh`.
 
 Repeat the scripted preflight with:
 
@@ -60,6 +62,8 @@ Repeat the scripted preflight with:
 scripts/smoke-codex-runtime.sh
 MENGO_CODEX_SMOKE_RUN_MODEL=1 scripts/smoke-codex-runtime.sh
 MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh
+scripts/smoke-generated-skill.sh
+MENGO_SKILL_SMOKE_RUN_MODEL=1 scripts/smoke-generated-skill.sh
 ```
 
 ## Claude Code Runtime
