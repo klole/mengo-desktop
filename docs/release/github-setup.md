@@ -73,6 +73,7 @@ Do not publish the preview release until:
 
 - Local ad-hoc packaging path works through `./build-mengo.sh`.
 - Release notarization path is scripted in `scripts/notarize-mengo.sh`.
+- Notarization preflight can be checked with `scripts/notarize-mengo.sh --check`.
 - Current local keychain has an Apple Development identity only; a Developer ID Application certificate and notarytool profile are still required before a notarized V1 can be published.
 
 ## Draft Release

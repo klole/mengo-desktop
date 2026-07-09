@@ -81,6 +81,14 @@ else
 fi
 pass "Generated skill smoke"
 
+echo
+echo "==> Notarization preflight"
+if "$ROOT/scripts/notarize-mengo.sh" --check; then
+    pass "notarization preflight"
+else
+    echo "WARN: notarization preflight is not complete; non-notarized preview path must remain explicit"
+fi
+
 if command -v gh >/dev/null 2>&1; then
     echo
     echo "==> GitHub PR and draft release"
