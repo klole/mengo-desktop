@@ -50,6 +50,7 @@ Current verification:
 - GitHub Actions macOS `build-test` passes on the V1 readiness PR.
 - Current local keychain has an Apple Development signing identity only; Developer ID Application certificate and notarytool credentials are still required to complete notarization.
 - Codex CLI scripted preflight passes locally after adding `screenpipe` MCP: `codex-cli 0.143.0`, `codex mcp list` includes `screenpipe`, and `codex exec --output-last-message` writes the final JSON line Mengo parses.
+- Codex scripted negative smoke passes: `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` simulates a missing screenpipe MCP and verifies the setup command is printed.
 - Local in-app Codex smoke passed through record -> synthesize -> review -> persist: Codex generated `~/.claude/skills/record-mengo-flow-skill/`, Review loaded `SKILL.md` from the slug directory, and the library entry persisted `file:///Users/kylebell/.claude/skills/record-mengo-flow-skill/`.
 - Local Library -> Review -> Save UI smoke passed on the generated Codex skill: reopening from Library navigated to Flow review, Save exited review back to Flow idle, and the library entry stayed pointed at the slug directory.
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
@@ -61,7 +62,7 @@ Still open:
 
 - Developer ID signing and notarization.
 - Hosted account strategy beyond local preview mode.
-- Broken-Codex setup manual error smoke.
+- Broken-Codex setup manual GUI alert smoke.
 - Manual app smoke matrix on a clean user account.
 - Legacy target strategy after V1: keep legacy targets in the package for the preview because full CI is now green, then move or remove if they continue to create maintenance noise.
 

@@ -103,6 +103,7 @@ Scripted Codex preflight:
 ```bash
 scripts/smoke-codex-runtime.sh
 MENGO_CODEX_SMOKE_RUN_MODEL=1 scripts/smoke-codex-runtime.sh
+MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh
 ```
 
 The runtime receives the synthesis prompt and access to local screenpipe context through the configured MCP path. Review the generated skill before saving it.

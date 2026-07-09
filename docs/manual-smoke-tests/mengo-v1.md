@@ -51,13 +51,15 @@ Run this checklist before publishing a V1 or V1-preview release.
 - [x] Confirm preflight detects the Codex executable.
 - [x] Complete record -> synthesize -> review. Local smoke created `~/.claude/skills/record-mengo-flow-skill/` and persisted the library path to that slug directory.
 - [x] Re-open generated skill from Library into Flow Review, Save, and confirm the UI exits review back to Flow idle.
-- [ ] Break Codex setup and confirm the error mentions Codex.
+- [x] Scripted negative preflight: `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` fails through the missing-screenpipe-MCP path and prints the Codex setup command.
+- [ ] Break Codex setup in the app and confirm the GUI alert mentions Codex/screenpipe MCP.
 
 Repeat the scripted preflight with:
 
 ```bash
 scripts/smoke-codex-runtime.sh
 MENGO_CODEX_SMOKE_RUN_MODEL=1 scripts/smoke-codex-runtime.sh
+MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh
 ```
 
 ## Claude Code Runtime
