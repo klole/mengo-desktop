@@ -46,7 +46,7 @@ Created on 2026-07-08:
 2. [runtime: smoke-test Codex record-to-skill path](https://github.com/klole/mengo-desktop/issues/2)
 3. [qa: run Mengo Desktop V1 manual smoke checklist](https://github.com/klole/mengo-desktop/issues/3)
 4. [build: decide legacy ScreenpipeMenu and ScreenpipeFlow target strategy](https://github.com/klole/mengo-desktop/issues/4)
-5. [release: publish v0.1.0 preview release](https://github.com/klole/mengo-desktop/issues/5)
+5. [release: publish v0.1.0 preview release](https://github.com/klole/mengo-desktop/issues/5) - complete
 6. [docs: add demo GIF or short walkthrough video](https://github.com/klole/mengo-desktop/issues/6)
 7. [packaging: verify x86_64 helper packaging or document arm64-only support](https://github.com/klole/mengo-desktop/issues/7)
 
@@ -60,8 +60,8 @@ Do not publish the preview release until:
 - `spctl --assess --type execute -vv MengoDesktop.app` result is documented.
 - `docs/release/v0.1.0-preview.md` checksum is regenerated from the final zip.
 - `scripts/release-readiness-status.sh` passes.
-- The explicit non-notarized preview publish decision is made.
-- After publishing, `MENGO_EXPECT_RELEASE_DRAFT=0 scripts/release-readiness-status.sh` passes.
+- The explicit non-notarized preview publish decision has been made for `v0.1.0-preview`.
+- After publishing, `scripts/release-readiness-status.sh` passes against the published prerelease.
 - Manual smoke test status is recorded in `docs/manual-smoke-tests/mengo-v1.md`.
 
 Before submitting the Codex for OSS application, refresh public metrics with:
@@ -83,14 +83,14 @@ scripts/codex-oss-application-status.sh
 - Notarization preflight can be checked with `scripts/notarize-mengo.sh --check`.
 - Current local keychain has an Apple Development identity only; a Developer ID Application certificate and notarytool profile are still required before a notarized V1 can be published.
 
-## Draft Release
+## Published Preview Release
 
-- Draft prerelease: https://github.com/klole/mengo-desktop/releases/tag/untagged-c262833bfd31f6c0f5ae
+- Published prerelease: https://github.com/klole/mengo-desktop/releases/tag/v0.1.0-preview
 - Intended tag: `v0.1.0-preview`
 - Target: `v1-release-readiness`
 - Asset: `MengoDesktop-macos-arm64.zip`
 - Asset digest reported by GitHub: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`
-- Status: draft, prerelease, not published; release body has been synced with `docs/release/v0.1.0-preview.md`.
+- Status: published prerelease, explicitly non-notarized; release body has been synced with `docs/release/v0.1.0-preview.md`.
 
 Publish the non-notarized preview only with the guarded script:
 

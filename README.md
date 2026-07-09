@@ -83,10 +83,9 @@ For a terminal-only release status check against the current local artifact and 
 
 ```bash
 scripts/release-readiness-status.sh
-MENGO_EXPECT_RELEASE_DRAFT=0 scripts/release-readiness-status.sh  # after publishing
 ```
 
-To publish the explicitly non-notarized preview release after the remaining release decision is made:
+The explicitly non-notarized preview release has been published. To rerun the guarded publish flow after preparing a new draft:
 
 ```bash
 MENGO_PUBLISH_NON_NOTARIZED_PREVIEW=1 scripts/publish-preview-release.sh

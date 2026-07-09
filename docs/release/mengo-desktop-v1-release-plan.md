@@ -40,7 +40,7 @@ Completed or improved:
 - Added `scripts/publish-preview-release.sh` for guarded non-notarized preview publication plus post-publish verification.
 - Added `scripts/codex-oss-application-status.sh` for repeatable GitHub metric refresh before submission.
 - Verified `@screenpipe/cli-darwin-x64` package availability in npm, but documented the preview release as Apple Silicon-only until an Intel-built artifact is smoke-tested on Intel hardware.
-- Prepared a draft `v0.1.0-preview` prerelease with `MengoDesktop-macos-arm64.zip` attached; it remains unpublished.
+- Published `v0.1.0-preview` as an explicitly non-notarized prerelease with `MengoDesktop-macos-arm64.zip` attached.
 - Fixed the in-app Codex smoke failure where Codex reported the parent skills directory plus a slug, causing Review to look for `SKILL.md` in the parent directory.
 - Fixed Library's "Re-open in Review" action so it navigates back to Flow after opening a saved skill for review.
 - Added unit coverage for Codex MCP preflight with both missing-`screenpipe` and configured-`screenpipe` MCP output.
@@ -63,7 +63,7 @@ Current verification:
 - `scripts/release-readiness-status.sh` passes on branch `v1-release-readiness`: local tests, codesign, checksum, expected non-notarized Gatekeeper rejection, Codex positive/negative smoke, PR status, and release asset digest are green.
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
 - Architecture support status: `build-mengo.sh` supports host-specific `arm64` and `x86_64` packaging; the current local artifact and preview notes are Apple Silicon-only because Intel hardware smoke is still missing.
-- Latest local release asset checksum and draft release asset digest: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.
+- Latest local release asset checksum and published release asset digest: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.
 
 Still open:
@@ -85,9 +85,9 @@ The relevant application signals are:
 
 ## Executive Readiness Call
 
-Mengo Desktop is the best candidate in this workspace. It is now close to application-ready for an honest preview-based Codex for OSS submission, but it still needs either a published non-notarized preview with final smoke status or a notarized build.
+Mengo Desktop is the best candidate in this workspace. It is now close to application-ready for an honest preview-based Codex for OSS submission, with a published non-notarized preview and remaining clean-user/manual smoke status still explicit.
 
-The strong case is conceptually good: Mengo Desktop records local screen/audio context, turns demonstrated workflows into reusable Codex/Claude-style skills, and sits close to the maintainer automation story OpenAI says the program supports. The main remaining weakness is public evidence: the repo still has small public metrics and the preview is unpublished. The earlier identity, governance, CI, release-note, and artifact-naming gaps have been addressed on PR #8.
+The strong case is conceptually good: Mengo Desktop records local screen/audio context, turns demonstrated workflows into reusable Codex/Claude-style skills, and sits close to the maintainer automation story OpenAI says the program supports. The main remaining weakness is public adoption evidence: the repo still has small public metrics. The earlier identity, governance, CI, release-note, artifact-naming, and preview-publication gaps have been addressed on PR #8.
 
 The practical target is not "perfect commercial app." The target is a clean OSS V1 that:
 

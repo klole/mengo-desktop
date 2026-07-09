@@ -73,6 +73,9 @@ print("## Submission Reminders")
 print()
 print("- Do not claim broad adoption unless stars/forks/downloads support it.")
 print("- Do not claim notarization until Gatekeeper passes on a notarized build.")
-print("- If publishing the non-notarized preview, verify it with `MENGO_EXPECT_RELEASE_DRAFT=0 scripts/release-readiness-status.sh` first.")
+if release.get("isDraft"):
+    print("- If publishing the non-notarized preview, verify it with `MENGO_EXPECT_RELEASE_DRAFT=0 scripts/release-readiness-status.sh` first.")
+else:
+    print("- Published preview is non-notarized; keep the application wording explicit.")
 print("- Fill OpenAI Organization ID manually from OpenAI platform settings.")
 PY

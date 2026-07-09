@@ -29,7 +29,7 @@ EOF
 fi
 
 echo "==> Verifying draft readiness"
-"$ROOT/scripts/release-readiness-status.sh"
+MENGO_EXPECT_RELEASE_DRAFT=1 "$ROOT/scripts/release-readiness-status.sh"
 
 echo
 echo "==> Publishing $RELEASE_TAG as a prerelease"

@@ -8,7 +8,7 @@ RELEASE_NOTES="$ROOT/docs/release/v0.1.0-preview.md"
 REPO="${GITHUB_REPOSITORY:-klole/mengo-desktop}"
 PR_NUMBER="${MENGO_RELEASE_PR:-8}"
 RELEASE_TAG="${MENGO_RELEASE_TAG:-v0.1.0-preview}"
-EXPECT_RELEASE_DRAFT="${MENGO_EXPECT_RELEASE_DRAFT:-1}"
+EXPECT_RELEASE_DRAFT="${MENGO_EXPECT_RELEASE_DRAFT:-0}"
 
 fail() {
     echo "FAIL: $*" >&2
@@ -137,6 +137,15 @@ Remaining manual/external gates:
 - Clean-user GUI smoke matrix.
 - In-app broken-Codex/MCP GUI alert smoke.
 - Clean-user generated-skill invocation from the selected runtime.
+EOF
+if [ "$EXPECT_RELEASE_DRAFT" = "1" ]; then
+    cat <<'EOF'
 - Developer ID signing/notarization, or explicit non-notarized preview publish decision.
 - Publish release and fill final Codex for OSS application metrics.
 EOF
+else
+    cat <<'EOF'
+- Developer ID signing/notarization for a notarized V1 release.
+- Fill final Codex for OSS application metrics.
+EOF
+fi

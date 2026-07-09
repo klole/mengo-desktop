@@ -35,24 +35,24 @@ Character count: 305.
 ## Anything Else
 
 ```text
-The repo is early but active: PR #8 prepares a clean V1 preview with MIT license, security/contributing docs, macOS CI, local preview mode, Codex runtime smoke scripts, and a draft release artifact. Current public metrics are small, so the case is ecosystem relevance and active maintenance rather than adoption.
+The repo is early but active: PR #8 prepares a clean V1 preview with MIT license, security/contributing docs, macOS CI, local preview mode, Codex runtime smoke scripts, and a published preview artifact. Current public metrics are small, so the case is ecosystem relevance and active maintenance rather than adoption.
 ```
 
-Character count: 312.
+Character count: 316.
 
 ## Current Facts
 
 - Repository: public.
 - Stars: 0 as of the latest GitHub check.
 - Forks: 0 as of the latest GitHub check.
-- Open issues: 4.
+- Open issues: 3.
 - Open PRs: 1, draft PR #8.
 - CI: macOS `build-test` passes on PR #8.
-- Draft release: `v0.1.0-preview`, unpublished.
-- Current draft release URL: `https://github.com/klole/mengo-desktop/releases/tag/untagged-c262833bfd31f6c0f5ae`.
-- Draft asset: `MengoDesktop-macos-arm64.zip`.
-- Draft asset checksum: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.
-- Release downloads: 0 while draft; refresh after publication.
+- Preview release: `v0.1.0-preview`, published prerelease.
+- Current release URL: `https://github.com/klole/mengo-desktop/releases/tag/v0.1.0-preview`.
+- Release asset: `MengoDesktop-macos-arm64.zip`.
+- Release asset checksum: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.
+- Release downloads: 0 as of the latest GitHub check.
 - Codex smoke: positive CLI/MCP smoke, final-message smoke, missing-MCP negative smoke, generated-skill file/read/invocation smoke, in-app record -> synthesize -> review persistence smoke, and Library -> Review -> Save smoke have passed.
 - Notarization: scripted but not complete; Developer ID Application certificate and notarytool profile still required.
 
@@ -60,7 +60,7 @@ Character count: 312.
 
 Do not submit until one of these is true:
 
-- `v0.1.0-preview` is published and explicitly labeled non-notarized, with clean-user smoke status recorded; or
+- `v0.1.0-preview` is published and explicitly labeled non-notarized, with remaining clean-user smoke status recorded; or
 - a Developer ID signed/notarized build is published and Gatekeeper passes.
 
 Before submitting, refresh:
