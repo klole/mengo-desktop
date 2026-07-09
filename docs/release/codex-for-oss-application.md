@@ -49,7 +49,7 @@ Character count: 312.
 - Open PRs: 1, draft PR #8.
 - CI: macOS `build-test` passes on PR #8.
 - Draft release: `v0.1.0-preview`, unpublished.
-- Current draft release URL: `https://github.com/klole/mengo-desktop/releases/tag/untagged-74810728071ae24f1a7b`.
+- Current draft release URL: `https://github.com/klole/mengo-desktop/releases/tag/untagged-c262833bfd31f6c0f5ae`.
 - Draft asset: `MengoDesktop-macos-arm64.zip`.
 - Draft asset checksum: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.
 - Release downloads: 0 while draft; refresh after publication.

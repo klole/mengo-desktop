@@ -85,7 +85,7 @@ scripts/codex-oss-application-status.sh
 
 ## Draft Release
 
-- Draft prerelease: https://github.com/klole/mengo-desktop/releases/tag/untagged-74810728071ae24f1a7b
+- Draft prerelease: https://github.com/klole/mengo-desktop/releases/tag/untagged-c262833bfd31f6c0f5ae
 - Intended tag: `v0.1.0-preview`
 - Target: `v1-release-readiness`
 - Asset: `MengoDesktop-macos-arm64.zip`
