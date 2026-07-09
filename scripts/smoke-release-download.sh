@@ -65,5 +65,13 @@ else
     fi
 fi
 
+if [ "${MENGO_RELEASE_DOWNLOAD_LAUNCH_SMOKE:-0}" = "1" ]; then
+    echo
+    echo "==> Launching downloaded app"
+    MENGO_APP_LAUNCH_SMOKE_APP="$APP" "$ROOT/scripts/smoke-app-launch.sh"
+else
+    echo "SKIP: set MENGO_RELEASE_DOWNLOAD_LAUNCH_SMOKE=1 to launch the downloaded app in local-preview mode"
+fi
+
 echo
 echo "Published release download smoke passed."

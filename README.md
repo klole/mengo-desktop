@@ -85,6 +85,7 @@ For a terminal-only release status check against the current local artifact and 
 scripts/release-readiness-status.sh
 MENGO_APP_LAUNCH_SMOKE=1 scripts/release-readiness-status.sh
 MENGO_RELEASE_DOWNLOAD_SMOKE=1 scripts/release-readiness-status.sh
+MENGO_RELEASE_DOWNLOAD_LAUNCH_SMOKE=1 scripts/smoke-release-download.sh
 ```
 
 For a notarized release candidate after installing a Developer ID Application certificate and configuring a notarytool profile:
