@@ -50,7 +50,7 @@ Run this checklist before publishing a V1 or V1-preview release.
 - [x] Select Codex in Settings.
 - [x] Confirm preflight detects the Codex executable.
 - [x] Complete record -> synthesize -> review. Local smoke created `~/.claude/skills/record-mengo-flow-skill/` and persisted the library path to that slug directory.
-- [ ] Save from the Codex review screen and confirm the UI exits review after saving.
+- [x] Re-open generated skill from Library into Flow Review, Save, and confirm the UI exits review back to Flow idle.
 - [ ] Break Codex setup and confirm the error mentions Codex.
 
 Repeat the scripted preflight with:

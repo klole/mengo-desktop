@@ -51,7 +51,7 @@ struct MainWindowView: View {
                 switch appState.selectedSection {
                 case .memory:   MemoryPane(recorder: recorder)
                 case .flow:     FlowPane(flow: flow)
-                case .library:  LibraryPane(flow: flow)
+                case .library:  LibraryPane(flow: flow) { appState.selectedSection = .flow }
                 case .settings: SettingsPane(account: account, settings: settings, recorder: recorder, flow: flow, onSignOut: onSignOut)
                 default:        ComingSoonPane(section: appState.selectedSection)
                 }

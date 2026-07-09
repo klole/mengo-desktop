@@ -79,5 +79,5 @@ Do not publish the preview release until:
 - Intended tag: `v0.1.0-preview`
 - Target: `v1-release-readiness`
 - Asset: `MengoDesktop-macos-arm64.zip`
-- Asset digest reported by GitHub: `sha256:3fcde87a7f51509e7e9ca84c4bb98a0565f8d3f0be2b9ff984ab24bc879b5a84`
+- Asset digest to upload after the Library review-navigation fix: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`
 - Status: draft, not published.
