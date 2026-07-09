@@ -59,6 +59,7 @@ Do not publish the preview release until:
 - `codesign --verify --deep --strict --verbose=2 MengoDesktop.app` passes.
 - `spctl --assess --type execute -vv MengoDesktop.app` result is documented.
 - `docs/release/v0.1.0-preview.md` checksum is regenerated from the final zip.
+- `scripts/release-readiness-status.sh` passes.
 - Manual smoke test status is recorded in `docs/manual-smoke-tests/mengo-v1.md`.
 
 ## Current Pull Request
@@ -75,9 +76,9 @@ Do not publish the preview release until:
 
 ## Draft Release
 
-- Draft prerelease: https://github.com/klole/mengo-desktop/releases/tag/untagged-1364ef715b4b6741d7dd
+- Draft prerelease: https://github.com/klole/mengo-desktop/releases/tag/untagged-cd97a45edea4f66685a4
 - Intended tag: `v0.1.0-preview`
 - Target: `v1-release-readiness`
 - Asset: `MengoDesktop-macos-arm64.zip`
 - Asset digest reported by GitHub: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`
-- Status: draft, not published.
+- Status: draft, prerelease, not published; release body has been synced with `docs/release/v0.1.0-preview.md`.

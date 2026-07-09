@@ -83,9 +83,9 @@ The relevant application signals are:
 
 ## Executive Readiness Call
 
-Mengo Desktop is the best candidate in this workspace, but it is not application-ready as-is.
+Mengo Desktop is the best candidate in this workspace. It is now close to application-ready for an honest preview-based Codex for OSS submission, but it still needs either a published non-notarized preview with final smoke status or a notarized build.
 
-The strong case is conceptually good: Mengo Desktop records local screen/audio context, turns demonstrated workflows into reusable Codex/Claude-style skills, and sits close to the maintainer automation story OpenAI says the program supports. The weak case is public evidence: the repo currently looks like a renamed private/experimental project, has stale ScreenpipeMenu branding, lacks a license/security/contribution posture, has no visible issue/PR activity, has no public adoption signals, and the latest public release asset still appears to be named for the old app.
+The strong case is conceptually good: Mengo Desktop records local screen/audio context, turns demonstrated workflows into reusable Codex/Claude-style skills, and sits close to the maintainer automation story OpenAI says the program supports. The main remaining weakness is public evidence: the repo still has small public metrics and the preview is unpublished. The earlier identity, governance, CI, release-note, and artifact-naming gaps have been addressed on PR #8.
 
 The practical target is not "perfect commercial app." The target is a clean OSS V1 that:
 
@@ -117,9 +117,11 @@ V1 should not require:
 - Cross-platform support.
 - A polished website, except enough landing/docs content to explain the app and link the repo/release.
 
-## Current Baseline
+## Initial Audit Snapshot
 
-Observed repo state:
+This snapshot records what was found at the start of the V1 readiness pass. It is intentionally preserved as audit history and is superseded by the progress log above.
+
+Observed repo state at the start of the pass:
 
 - Local repo: `/Users/kylebell/screenpipe.old`
 - Public remote: `https://github.com/klole/mengo-desktop.git`
@@ -133,7 +135,7 @@ Observed repo state:
 - `.DS_Store` files exist under source/test paths and should not be versioned
 - `.claude/` is currently untracked and should be checked before any commit
 
-Observed verification from the audit:
+Observed verification from the initial audit:
 
 - `swift test --filter MengoDesktopTests` passed: 133 selected tests, 0 failures
 - Full `swift test` failed in legacy `ScreenpipeFlowTests.AppStateTests`, not in MengoDesktop tests
