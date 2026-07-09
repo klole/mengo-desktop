@@ -78,4 +78,5 @@ if release.get("isDraft"):
 else:
     print("- Published preview is non-notarized; keep the application wording explicit.")
 print("- Fill OpenAI Organization ID manually from OpenAI platform settings.")
+print("- Validate copy source before submitting: `scripts/validate-codex-oss-packet.sh`.")
 PY

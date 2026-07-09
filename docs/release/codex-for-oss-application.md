@@ -6,6 +6,7 @@ Refresh the GitHub facts immediately before submitting:
 
 ```bash
 scripts/codex-oss-application-status.sh
+scripts/validate-codex-oss-packet.sh
 ```
 
 For the final copy/paste packet, use `docs/release/codex-for-oss-submission-packet.md`.

@@ -6,6 +6,7 @@ Use this as the copy source immediately before submitting the OpenAI Codex for O
 
 ```bash
 scripts/codex-oss-application-status.sh
+scripts/validate-codex-oss-packet.sh
 ```
 
 ## Form Fields

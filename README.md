@@ -107,6 +107,7 @@ For Codex for OSS application facts:
 
 ```bash
 scripts/codex-oss-application-status.sh
+scripts/validate-codex-oss-packet.sh
 ```
 
 The copy-ready submission packet is in `docs/release/codex-for-oss-submission-packet.md`.
