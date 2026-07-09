@@ -54,8 +54,9 @@ Run this checklist before publishing a V1 or V1-preview release.
 - [x] Scripted negative preflight: `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` fails through the missing-screenpipe-MCP path and prints the Codex setup command.
 - [x] Scripted generated-skill file smoke: `scripts/smoke-generated-skill.sh` verifies the generated skill directory, `SKILL.md`, and valid `flow.json`.
 - [x] Optional model-backed generated-skill read smoke: `MENGO_SKILL_SMOKE_RUN_MODEL=1 scripts/smoke-generated-skill.sh` returned `{"status":"ok","readSkill":true,"readFlow":true}`.
+- [x] Terminal Codex generated-skill invocation smoke: `MENGO_SKILL_SMOKE_RUN_MODEL=1 MENGO_SKILL_SMOKE_INVOKE=1 scripts/smoke-generated-skill.sh` returned `{"status":"ok","readSkill":true,"readFlow":true,"invoked":true,"stepCount":5}`.
 - [ ] Break Codex setup in the app and confirm the GUI alert mentions Codex/screenpipe MCP.
-- [ ] Full generated-skill invocation from the selected runtime.
+- [ ] Clean-user generated-skill invocation from the selected runtime.
 
 Repeat the scripted preflight with:
 
@@ -65,6 +66,7 @@ MENGO_CODEX_SMOKE_RUN_MODEL=1 scripts/smoke-codex-runtime.sh
 MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh
 scripts/smoke-generated-skill.sh
 MENGO_SKILL_SMOKE_RUN_MODEL=1 scripts/smoke-generated-skill.sh
+MENGO_SKILL_SMOKE_RUN_MODEL=1 MENGO_SKILL_SMOKE_INVOKE=1 scripts/smoke-generated-skill.sh
 ```
 
 ## Claude Code Runtime

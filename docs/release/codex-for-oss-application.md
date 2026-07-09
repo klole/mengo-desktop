@@ -53,7 +53,7 @@ Character count: 312.
 - Draft asset: `MengoDesktop-macos-arm64.zip`.
 - Draft asset checksum: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.
 - Release downloads: 0 while draft; refresh after publication.
-- Codex smoke: positive CLI/MCP smoke, final-message smoke, missing-MCP negative smoke, generated-skill file/read smoke, in-app record -> synthesize -> review persistence smoke, and Library -> Review -> Save smoke have passed.
+- Codex smoke: positive CLI/MCP smoke, final-message smoke, missing-MCP negative smoke, generated-skill file/read/invocation smoke, in-app record -> synthesize -> review persistence smoke, and Library -> Review -> Save smoke have passed.
 - Notarization: scripted but not complete; Developer ID Application certificate and notarytool profile still required.
 
 ## Submission Gate

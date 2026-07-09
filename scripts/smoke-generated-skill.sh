@@ -37,6 +37,7 @@ if [ "${MENGO_SKILL_SMOKE_RUN_MODEL:-0}" != "1" ]; then
     echo
     echo "Generated skill file smoke passed."
     echo "Set MENGO_SKILL_SMOKE_RUN_MODEL=1 to have $RUNTIME read the skill."
+    echo "Set MENGO_SKILL_SMOKE_INVOKE=1 too to have $RUNTIME apply the skill instructions."
     exit 0
 fi
 
@@ -47,13 +48,19 @@ case "$RUNTIME" in
   codex)
     CODEX_BIN="${CODEX_BIN:-codex}"
     echo
-    echo "==> Codex generated-skill read smoke"
+    if [ "${MENGO_SKILL_SMOKE_INVOKE:-0}" = "1" ]; then
+        echo "==> Codex generated-skill invocation smoke"
+        PROMPT="Read $SKILL_DIR/SKILL.md and $SKILL_DIR/flow.json using read-only file inspection as needed. Do not modify files. Invoke the generated skill for task_to_record=\"record a short Mengo Flow task\" and output_skills_dir=\"$SKILL_DIR\". Reply with exactly this JSON object shape and no markdown: {\"status\":\"ok\",\"skillDir\":\"$SKILL_DIR\",\"readSkill\":true,\"readFlow\":true,\"invoked\":true,\"stepCount\":5}"
+    else
+        echo "==> Codex generated-skill read smoke"
+        PROMPT="Read $SKILL_DIR/SKILL.md and $SKILL_DIR/flow.json using read-only file inspection as needed. Do not modify files. Reply with exactly this JSON object shape and no markdown: {\"status\":\"ok\",\"skillDir\":\"$SKILL_DIR\",\"readSkill\":true,\"readFlow\":true}"
+    fi
     "$CODEX_BIN" exec \
         --dangerously-bypass-approvals-and-sandbox \
         --skip-git-repo-check \
         --add-dir "$SKILL_DIR" \
         --output-last-message "$LAST_MESSAGE" \
-        "Read $SKILL_DIR/SKILL.md and $SKILL_DIR/flow.json. Do not modify files or call tools. Reply with exactly this JSON object shape and no markdown: {\"status\":\"ok\",\"skillDir\":\"$SKILL_DIR\",\"readSkill\":true,\"readFlow\":true}" \
+        "$PROMPT" \
         >/tmp/mengo-generated-skill-smoke.stdout \
         2>/tmp/mengo-generated-skill-smoke.stderr
 
@@ -64,10 +71,37 @@ case "$RUNTIME" in
     }
     cat "$LAST_MESSAGE"
     echo
-    if ! grep -F '"status"' "$LAST_MESSAGE" | grep -F '"ok"' >/dev/null; then
-        fail "Codex generated-skill read smoke did not return status ok"
+    python3 - "$LAST_MESSAGE" <<'PY' || fail "Codex generated-skill smoke did not return the expected JSON"
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+
+required = {
+    "status": "ok",
+    "readSkill": True,
+    "readFlow": True,
+}
+for key, value in required.items():
+    if data.get(key) != value:
+        raise SystemExit(f"{key} mismatch")
+PY
+    if [ "${MENGO_SKILL_SMOKE_INVOKE:-0}" = "1" ]; then
+        python3 - "$LAST_MESSAGE" <<'PY' || fail "Codex generated-skill invocation smoke did not return invoked true"
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+
+if data.get("invoked") is not True:
+    raise SystemExit("invoked mismatch")
+PY
+        echo "Codex generated-skill invocation smoke passed."
+    else
+        echo "Codex generated-skill read smoke passed."
     fi
-    echo "Codex generated-skill read smoke passed."
     ;;
   *)
     fail "unsupported MENGO_SKILL_SMOKE_RUNTIME=$RUNTIME; currently supported: codex"

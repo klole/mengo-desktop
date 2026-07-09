@@ -76,6 +76,9 @@ echo "==> Generated skill smoke"
 "$ROOT/scripts/smoke-generated-skill.sh"
 if [ "${MENGO_SKILL_SMOKE_RUN_MODEL:-0}" = "1" ]; then
     MENGO_SKILL_SMOKE_RUN_MODEL=1 "$ROOT/scripts/smoke-generated-skill.sh"
+    if [ "${MENGO_SKILL_SMOKE_INVOKE:-0}" = "1" ]; then
+        MENGO_SKILL_SMOKE_RUN_MODEL=1 MENGO_SKILL_SMOKE_INVOKE=1 "$ROOT/scripts/smoke-generated-skill.sh"
+    fi
 else
     echo "SKIP: set MENGO_SKILL_SMOKE_RUN_MODEL=1 to have Codex read the generated skill"
 fi
@@ -133,7 +136,7 @@ cat <<'EOF'
 Remaining manual/external gates:
 - Clean-user GUI smoke matrix.
 - In-app broken-Codex/MCP GUI alert smoke.
-- Full generated-skill invocation from the selected runtime.
+- Clean-user generated-skill invocation from the selected runtime.
 - Developer ID signing/notarization, or explicit non-notarized preview publish decision.
 - Publish release and fill final Codex for OSS application metrics.
 EOF
