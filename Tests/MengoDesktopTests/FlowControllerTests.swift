@@ -135,6 +135,21 @@ final class FlowControllerTests: XCTestCase {
         let r = await makeController(executableOverride: { _ in codex }, settings: makeSettings(runtime: .codex)).preflight()
         XCTAssertNil(r)
     }
+    func test_preflightAlertContent_codexMissingMCPNamesRuntimeAndSetupCommand() {
+        let content = FlowController.PreflightAlertContent.content(for: .runtimeMCPNotConfigured(.codex))
+        XCTAssertEqual(content.message, "The screenpipe MCP isn't set up for Codex")
+        XCTAssertTrue(content.informativeText.contains("Run this in a terminal, then retry:"))
+        XCTAssertTrue(content.informativeText.contains("codex mcp add screenpipe -- npx -y screenpipe-mcp"))
+        XCTAssertEqual(content.primaryButton, "Copy command")
+        XCTAssertEqual(content.secondaryButton, "OK")
+        XCTAssertEqual(content.clipboardText, "codex mcp add screenpipe -- npx -y screenpipe-mcp")
+    }
+    func test_preflightAlertContent_claudeMissingMCPUsesClaudeSetupCommand() {
+        let content = FlowController.PreflightAlertContent.content(for: .runtimeMCPNotConfigured(.claudeCode))
+        XCTAssertEqual(content.message, "The screenpipe MCP isn't set up for Claude Code")
+        XCTAssertTrue(content.informativeText.contains("claude mcp add screenpipe -s user -- npx -y screenpipe-mcp"))
+        XCTAssertEqual(content.clipboardText, "claude mcp add screenpipe -s user -- npx -y screenpipe-mcp")
+    }
 
     func test_start_entersRecording() async {
         let c = makeController()

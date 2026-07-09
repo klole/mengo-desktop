@@ -52,6 +52,44 @@ final class FlowController {
         case runtimeMCPNotConfigured(SynthesisRuntime)
     }
 
+    struct PreflightAlertContent: Equatable {
+        let message: String
+        let informativeText: String
+        let primaryButton: String
+        let secondaryButton: String?
+        let clipboardText: String?
+
+        static func content(for failure: PreflightFailure) -> PreflightAlertContent {
+            switch failure {
+            case .screenpipeNotRunning:
+                return .init(message: "The recorder isn't running",
+                             informativeText: "Mengo Flow needs Mengo Memory's recorder. Check the Memory tab.",
+                             primaryButton: "OK",
+                             secondaryButton: nil,
+                             clipboardText: nil)
+            case .audioPaused:
+                return .init(message: "Your microphone is paused",
+                             informativeText: "Flow needs the mic to capture your narration. Resume it from the Memory tab, then try again.",
+                             primaryButton: "OK",
+                             secondaryButton: nil,
+                             clipboardText: nil)
+            case .runtimeNotFound(let runtime):
+                let where_ = runtime.executableSearchPaths.joined(separator: ", ")
+                return .init(message: "\(runtime.displayName) CLI not found",
+                             informativeText: "Install the \(runtime.displayName) CLI, then retry. Flow looked in: \(where_)",
+                             primaryButton: "OK",
+                             secondaryButton: nil,
+                             clipboardText: nil)
+            case .runtimeMCPNotConfigured(let runtime):
+                return .init(message: "The screenpipe MCP isn't set up for \(runtime.displayName)",
+                             informativeText: "Run this in a terminal, then retry:\n\n\(runtime.mcpAddCommand)",
+                             primaryButton: "Copy command",
+                             secondaryButton: "OK",
+                             clipboardText: runtime.mcpAddCommand)
+            }
+        }
+    }
+
     /// Snapshot of the user's entitlement, captured at `save()` time.
     struct Entitlement { let isPro: Bool; let flowLimit: Int? }
 
@@ -464,29 +502,22 @@ final class FlowController {
     // MARK: - Alerts
 
     static func presentDefaultPreflightAlert(_ f: PreflightFailure) {
+        let content = PreflightAlertContent.content(for: f)
         let a = NSAlert()
-        switch f {
-        case .screenpipeNotRunning:
-            a.messageText = "The recorder isn't running"
-            a.informativeText = "Mengo Flow needs Mengo Memory's recorder. Check the Memory tab."
-        case .audioPaused:
-            a.messageText = "Your microphone is paused"
-            a.informativeText = "Flow needs the mic to capture your narration. Resume it from the Memory tab, then try again."
-        case .runtimeNotFound(let runtime):
-            a.messageText = "\(runtime.displayName) CLI not found"
-            let where_ = runtime.executableSearchPaths.joined(separator: ", ")
-            a.informativeText = "Install the \(runtime.displayName) CLI, then retry. Flow looked in: \(where_)"
-        case .runtimeMCPNotConfigured(let runtime):
-            a.messageText = "The screenpipe MCP isn't set up for \(runtime.displayName)"
-            a.informativeText = "Run this in a terminal, then retry:\n\n\(runtime.mcpAddCommand)"
-            a.addButton(withTitle: "Copy command"); a.addButton(withTitle: "OK")
+        a.messageText = content.message
+        a.informativeText = content.informativeText
+        a.addButton(withTitle: content.primaryButton)
+        if let secondaryButton = content.secondaryButton {
+            a.addButton(withTitle: secondaryButton)
             if a.runModal() == .alertFirstButtonReturn {
                 NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(runtime.mcpAddCommand, forType: .string)
+                if let clipboardText = content.clipboardText {
+                    NSPasteboard.general.setString(clipboardText, forType: .string)
+                }
             }
             return
         }
-        a.addButton(withTitle: "OK"); a.runModal()
+        a.runModal()
     }
 
     /// Default action when a Free user tries to save past their flow limit.

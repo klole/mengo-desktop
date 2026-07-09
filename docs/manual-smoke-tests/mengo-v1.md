@@ -5,7 +5,7 @@ Run this checklist before publishing a V1 or V1-preview release.
 ## Fresh Install
 
 - [x] Scripted clean-home check: `HOME=$(mktemp -d) swift test` passes with 186 tests, 0 failures.
-- [x] Latest local full test run after Codex path normalization: `swift test` passes with 189 tests, 0 failures.
+- [x] Latest local full test run after Codex broken-MCP alert coverage: `swift test` passes with 191 tests, 0 failures.
 - [x] Scripted published-asset smoke: `MENGO_RELEASE_DOWNLOAD_SMOKE=1 scripts/release-readiness-status.sh` downloads the release zip, verifies checksum, extracts `MengoDesktop.app` with `ditto`, runs codesign verification, and confirms the expected non-notarized Gatekeeper rejection.
 - [ ] Move the app to `~/Applications`.
 - [ ] Launch from Finder.
@@ -52,6 +52,7 @@ Run this checklist before publishing a V1 or V1-preview release.
 - [x] Optional model-backed generated-skill read smoke: `MENGO_SKILL_SMOKE_RUN_MODEL=1 scripts/smoke-generated-skill.sh` returned `{"status":"ok","readSkill":true,"readFlow":true}`.
 - [x] Terminal Codex generated-skill invocation smoke: `MENGO_SKILL_SMOKE_RUN_MODEL=1 MENGO_SKILL_SMOKE_INVOKE=1 scripts/smoke-generated-skill.sh` returned `{"status":"ok","readSkill":true,"readFlow":true,"invoked":true,"stepCount":5}`.
 - [x] Scripted clean generated-skill invocation smoke: `scripts/smoke-clean-generated-skill.sh` copied the generated skill into a temporary `.claude/skills` home and Codex returned `{"status":"ok","readSkill":true,"readFlow":true,"invoked":true,"stepCount":5}`.
+- [x] Unit coverage: `FlowControllerTests` verifies the missing Codex/screenpipe MCP alert names Codex, includes `codex mcp add screenpipe -- npx -y screenpipe-mcp`, and exposes "Copy command" / "OK" actions.
 - [ ] Break Codex setup in the app and confirm the GUI alert mentions Codex/screenpipe MCP.
 - [ ] Clean-user in-app generated-skill invocation from the selected runtime.
 

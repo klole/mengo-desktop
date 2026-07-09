@@ -47,11 +47,12 @@ Completed or improved:
 - Fixed the in-app Codex smoke failure where Codex reported the parent skills directory plus a slug, causing Review to look for `SKILL.md` in the parent directory.
 - Fixed Library's "Re-open in Review" action so it navigates back to Flow after opening a saved skill for review.
 - Added unit coverage for Codex MCP preflight with both missing-`screenpipe` and configured-`screenpipe` MCP output.
+- Added unit coverage for the broken Codex/screenpipe MCP alert content and copy-command action metadata.
 - Prepared copy-ready Codex for OSS application notes with sub-500-character form answers.
 
 Current verification:
 
-- `swift test` passed: 189 tests, 0 failures.
+- `swift test` passed: 191 tests, 0 failures.
 - `./build-mengo.sh` passed.
 - `codesign --verify --deep --strict --verbose=2 MengoDesktop.app` passed.
 - `MengoDesktop.app/Contents/MacOS/MengoDesktop` and `Contents/Helpers/screenpipe` both report `arm64` in the latest local artifact.
@@ -60,6 +61,7 @@ Current verification:
 - Current local keychain has an Apple Development signing identity only; `scripts/notarize-mengo.sh --check` reports that a Developer ID Application certificate and notarytool credentials are still required to complete notarization.
 - Codex CLI scripted preflight passes locally after adding `screenpipe` MCP: `codex-cli 0.143.0`, `codex mcp list` includes `screenpipe`, and `codex exec --output-last-message` writes the final JSON line Mengo parses.
 - Codex scripted negative smoke passes: `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` simulates a missing screenpipe MCP and verifies the setup command is printed.
+- Broken Codex/screenpipe MCP alert content has unit coverage: `FlowControllerTests` verifies the alert names Codex, includes `codex mcp add screenpipe -- npx -y screenpipe-mcp`, and exposes "Copy command" / "OK" actions.
 - Generated-skill file/read/invocation smoke passes: `scripts/smoke-generated-skill.sh` verifies the generated skill directory, `SKILL.md`, and valid `flow.json`; `MENGO_SKILL_SMOKE_RUN_MODEL=1 scripts/smoke-generated-skill.sh` returned `{"status":"ok","readSkill":true,"readFlow":true}` from Codex; `MENGO_SKILL_SMOKE_RUN_MODEL=1 MENGO_SKILL_SMOKE_INVOKE=1 scripts/smoke-generated-skill.sh` returned `{"status":"ok","readSkill":true,"readFlow":true,"invoked":true,"stepCount":5}` from Codex; `scripts/smoke-clean-generated-skill.sh` copied the generated skill into a temporary `.claude/skills` home and Codex invoked the copied skill successfully.
 - Local in-app Codex smoke passed through record -> synthesize -> review -> persist: Codex generated `~/.claude/skills/record-mengo-flow-skill/`, Review loaded `SKILL.md` from the slug directory, and the library entry persisted `file:///Users/kylebell/.claude/skills/record-mengo-flow-skill/`.
 - Local Library -> Review -> Save UI smoke passed on the generated Codex skill: reopening from Library navigated to Flow review, Save exited review back to Flow idle, and the library entry stayed pointed at the slug directory.
