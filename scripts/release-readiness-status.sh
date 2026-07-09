@@ -26,12 +26,13 @@ pass() {
 echo "==> Git state"
 cd "$ROOT"
 BRANCH="$(git branch --show-current)"
+LOCAL_HEAD="$(git rev-parse HEAD)"
 STATUS="$(git status --short)"
 if [ -n "$STATUS" ]; then
     echo "$STATUS"
     fail "working tree is not clean"
 fi
-pass "working tree clean on $BRANCH"
+pass "working tree clean on $BRANCH at $LOCAL_HEAD"
 
 echo
 echo "==> Tests"
@@ -114,6 +115,9 @@ if command -v gh >/dev/null 2>&1; then
     fi
     PR_STATE="$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid,mergeStateStatus,statusCheckRollup)"
     echo "$PR_STATE"
+    if ! echo "$PR_STATE" | grep -q "\"headRefOid\":\"$LOCAL_HEAD\""; then
+        fail "PR #$PR_NUMBER head does not match local HEAD $LOCAL_HEAD"
+    fi
     if ! echo "$PR_STATE" | grep -q '"mergeStateStatus":"CLEAN"'; then
         fail "PR #$PR_NUMBER is not clean"
     fi
