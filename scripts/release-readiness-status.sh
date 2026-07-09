@@ -91,7 +91,11 @@ fi
 
 if command -v gh >/dev/null 2>&1; then
     echo
-    echo "==> GitHub PR and draft release"
+    if [ "$EXPECT_RELEASE_DRAFT" = "1" ]; then
+        echo "==> GitHub PR and draft release"
+    else
+        echo "==> GitHub PR and published release"
+    fi
     PR_STATE="$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid,mergeStateStatus,statusCheckRollup)"
     echo "$PR_STATE"
     if ! echo "$PR_STATE" | grep -q '"mergeStateStatus":"CLEAN"'; then

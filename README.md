@@ -26,7 +26,7 @@ Known V1 gaps:
 ## Requirements
 
 - macOS 15 Sequoia or later
-- Apple Silicon for the current published preview artifact
+- Apple Silicon for the current preview artifact
 - Xcode 16+ / Swift 6 when building from source
 - A supported synthesis runtime:
   - Codex CLI, when using the Codex runtime
@@ -92,7 +92,7 @@ To publish the explicitly non-notarized preview release after the remaining rele
 MENGO_PUBLISH_NON_NOTARIZED_PREVIEW=1 scripts/publish-preview-release.sh
 ```
 
-The preview zip is host-architecture-specific because the bundled screenpipe helper is distributed per architecture. The current published preview artifact is Apple Silicon (`MengoDesktop-macos-arm64.zip`). The x86_64 helper package exists upstream, and `build-mengo.sh` will select it on an Intel Mac, but Intel packaging remains unverified until it is built and smoke-tested on Intel hardware.
+The preview zip is host-architecture-specific because the bundled screenpipe helper is distributed per architecture. The current preview artifact is Apple Silicon (`MengoDesktop-macos-arm64.zip`). The x86_64 helper package exists upstream, and `build-mengo.sh` will select it on an Intel Mac, but Intel packaging remains unverified until it is built and smoke-tested on Intel hardware.
 
 ## Runtime Setup
 

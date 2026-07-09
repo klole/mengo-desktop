@@ -59,7 +59,7 @@ Current verification:
 - Generated-skill file smoke passes: `scripts/smoke-generated-skill.sh` verifies the generated skill directory, `SKILL.md`, and valid `flow.json`.
 - Local in-app Codex smoke passed through record -> synthesize -> review -> persist: Codex generated `~/.claude/skills/record-mengo-flow-skill/`, Review loaded `SKILL.md` from the slug directory, and the library entry persisted `file:///Users/kylebell/.claude/skills/record-mengo-flow-skill/`.
 - Local Library -> Review -> Save UI smoke passed on the generated Codex skill: reopening from Library navigated to Flow review, Save exited review back to Flow idle, and the library entry stayed pointed at the slug directory.
-- `scripts/release-readiness-status.sh` passes on branch `v1-release-readiness`: local tests, codesign, checksum, expected non-notarized Gatekeeper rejection, Codex positive/negative smoke, PR status, and draft release asset digest are green.
+- `scripts/release-readiness-status.sh` passes on branch `v1-release-readiness`: local tests, codesign, checksum, expected non-notarized Gatekeeper rejection, Codex positive/negative smoke, PR status, and release asset digest are green.
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
 - Architecture support status: `build-mengo.sh` supports host-specific `arm64` and `x86_64` packaging; the current local artifact and preview notes are Apple Silicon-only because Intel hardware smoke is still missing.
 - Latest local release asset checksum and draft release asset digest: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.
