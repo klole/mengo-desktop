@@ -37,6 +37,7 @@ Completed or improved:
 - Added `scripts/smoke-codex-runtime.sh` for repeatable Codex CLI/MCP/final-message smoke testing.
 - Added `scripts/smoke-generated-skill.sh` for repeatable generated-skill file validation, with optional Codex read and invocation smoke.
 - Added `scripts/release-readiness-status.sh` for repeatable terminal release-gate checks.
+- Added `scripts/smoke-release-download.sh` for repeatable published-asset download, checksum, `ditto` extraction, codesign, and expected Gatekeeper-result verification.
 - Added `scripts/publish-preview-release.sh` for guarded non-notarized preview publication plus post-publish verification.
 - Added `scripts/codex-oss-application-status.sh` for repeatable GitHub metric refresh before submission.
 - Verified `@screenpipe/cli-darwin-x64` package availability in npm, but documented the preview release as Apple Silicon-only until an Intel-built artifact is smoke-tested on Intel hardware.

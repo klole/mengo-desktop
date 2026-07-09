@@ -6,11 +6,7 @@ Run this checklist before publishing a V1 or V1-preview release.
 
 - [x] Scripted clean-home check: `HOME=$(mktemp -d) swift test` passes with 186 tests, 0 failures.
 - [x] Latest local full test run after Codex path normalization: `swift test` passes with 189 tests, 0 failures.
-- [ ] Download the release zip.
-- [ ] Verify checksum if one is published.
-- [ ] Unzip `MengoDesktop.app`.
-- [ ] Run `codesign --verify --deep --strict --verbose=2 MengoDesktop.app`.
-- [ ] Run `spctl --assess --type execute -vv MengoDesktop.app`, or confirm the release is explicitly labeled non-notarized preview.
+- [x] Scripted published-asset smoke: `MENGO_RELEASE_DOWNLOAD_SMOKE=1 scripts/release-readiness-status.sh` downloads the release zip, verifies checksum, extracts `MengoDesktop.app` with `ditto`, runs codesign verification, and confirms the expected non-notarized Gatekeeper rejection.
 - [ ] Move the app to `~/Applications`.
 - [ ] Launch from Finder.
 - [ ] Grant Screen Recording permission.

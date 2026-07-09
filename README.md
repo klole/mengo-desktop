@@ -83,6 +83,7 @@ For a terminal-only release status check against the current local artifact and 
 
 ```bash
 scripts/release-readiness-status.sh
+MENGO_RELEASE_DOWNLOAD_SMOKE=1 scripts/release-readiness-status.sh
 ```
 
 The explicitly non-notarized preview release has been published. To rerun the guarded publish flow after preparing a new draft:
@@ -100,6 +101,8 @@ scripts/codex-oss-application-status.sh
 The copy-ready submission packet is in `docs/release/codex-for-oss-submission-packet.md`.
 
 The preview zip is host-architecture-specific because the bundled screenpipe helper is distributed per architecture. The current preview artifact is Apple Silicon (`MengoDesktop-macos-arm64.zip`). The x86_64 helper package exists upstream, and `build-mengo.sh` will select it on an Intel Mac, but Intel packaging remains unverified until it is built and smoke-tested on Intel hardware.
+
+For manual install, extract the preview zip with Finder/Archive Utility or `ditto -x -k`; command-line `unzip` does not restore all macOS signing metadata for the bundled helper assets.
 
 ## Runtime Setup
 

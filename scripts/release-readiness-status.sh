@@ -49,6 +49,14 @@ if [ "$LOCAL_SHA" != "$NOTES_SHA" ]; then
 fi
 pass "local zip checksum matches release notes: $LOCAL_SHA"
 
+if [ "${MENGO_RELEASE_DOWNLOAD_SMOKE:-0}" = "1" ]; then
+    echo
+    echo "==> Published release download smoke"
+    "$ROOT/scripts/smoke-release-download.sh"
+else
+    echo "SKIP: set MENGO_RELEASE_DOWNLOAD_SMOKE=1 to download and verify the published release asset"
+fi
+
 if spctl --assess --type execute -vv "$APP" >/tmp/mengo-spctl.out 2>&1; then
     pass "Gatekeeper assessment passed"
 else
