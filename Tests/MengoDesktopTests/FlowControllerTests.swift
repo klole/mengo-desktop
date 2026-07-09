@@ -38,6 +38,20 @@ final class FlowControllerTests: XCTestCase {
         return u
     }
 
+    private func fakeMCPListExecutable(output: String, exitStatus: Int32 = 0) throws -> URL {
+        let script = tmpDir().appendingPathComponent("fake-runtime")
+        let body = """
+        #!/bin/sh
+        cat <<'EOF'
+        \(output)
+        EOF
+        exit \(exitStatus)
+        """
+        try body.write(to: script, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+        return script
+    }
+
     final class StubLoginItem: LoginItemControlling, @unchecked Sendable {
         var enabled = false
         func register() throws { enabled = true }
@@ -110,6 +124,16 @@ final class FlowControllerTests: XCTestCase {
     func test_preflight_codexRuntimeMissing() async {
         let r = await makeController(executableOverride: { _ in nil }, settings: makeSettings(runtime: .codex)).preflight()
         XCTAssertEqual(r, .runtimeNotFound(.codex))
+    }
+    func test_preflight_codexMCPMissing() async throws {
+        let codex = try fakeMCPListExecutable(output: "No MCP servers configured.")
+        let r = await makeController(executableOverride: { _ in codex }, settings: makeSettings(runtime: .codex)).preflight()
+        XCTAssertEqual(r, .runtimeMCPNotConfigured(.codex))
+    }
+    func test_preflight_codexMCPConfigured() async throws {
+        let codex = try fakeMCPListExecutable(output: "screenpipe  npx -y screenpipe-mcp")
+        let r = await makeController(executableOverride: { _ in codex }, settings: makeSettings(runtime: .codex)).preflight()
+        XCTAssertNil(r)
     }
 
     func test_start_entersRecording() async {
