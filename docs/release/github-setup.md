@@ -64,6 +64,12 @@ Do not publish the preview release until:
 - After publishing, `MENGO_EXPECT_RELEASE_DRAFT=0 scripts/release-readiness-status.sh` passes.
 - Manual smoke test status is recorded in `docs/manual-smoke-tests/mengo-v1.md`.
 
+Before submitting the Codex for OSS application, refresh public metrics with:
+
+```bash
+scripts/codex-oss-application-status.sh
+```
+
 ## Current Pull Request
 
 - Draft PR: https://github.com/klole/mengo-desktop/pull/8

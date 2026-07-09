@@ -38,6 +38,7 @@ Completed or improved:
 - Added `scripts/smoke-generated-skill.sh` for repeatable generated-skill file validation, with optional Codex read smoke.
 - Added `scripts/release-readiness-status.sh` for repeatable terminal release-gate checks.
 - Added `scripts/publish-preview-release.sh` for guarded non-notarized preview publication plus post-publish verification.
+- Added `scripts/codex-oss-application-status.sh` for repeatable GitHub metric refresh before submission.
 - Verified `@screenpipe/cli-darwin-x64` package availability in npm, but documented the preview release as Apple Silicon-only until an Intel-built artifact is smoke-tested on Intel hardware.
 - Prepared a draft `v0.1.0-preview` prerelease with `MengoDesktop-macos-arm64.zip` attached; it remains unpublished.
 - Fixed the in-app Codex smoke failure where Codex reported the parent skills directory plus a slug, causing Review to look for `SKILL.md` in the parent directory.

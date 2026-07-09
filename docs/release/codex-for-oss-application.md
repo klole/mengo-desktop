@@ -2,6 +2,12 @@
 
 Use this after the preview release is published and final metrics are refreshed. The Codex for OSS form asks for these fields and limits the three narrative answers to 500 characters.
 
+Refresh the GitHub facts immediately before submitting:
+
+```bash
+scripts/codex-oss-application-status.sh
+```
+
 ## Copy-Ready Fields
 
 - GitHub username: `klole`
@@ -59,10 +65,9 @@ Do not submit until one of these is true:
 
 Before submitting, refresh:
 
-- star/fork counts,
-- release URL,
-- release download count,
-- latest CI status,
+- star/fork counts with `scripts/codex-oss-application-status.sh`,
+- release URL and download count with `scripts/codex-oss-application-status.sh`,
+- latest CI status with `scripts/codex-oss-application-status.sh`,
 - final manual smoke status,
 - OpenAI Organization ID.
 

@@ -92,6 +92,12 @@ To publish the explicitly non-notarized preview release after the remaining rele
 MENGO_PUBLISH_NON_NOTARIZED_PREVIEW=1 scripts/publish-preview-release.sh
 ```
 
+For Codex for OSS application facts:
+
+```bash
+scripts/codex-oss-application-status.sh
+```
+
 The preview zip is host-architecture-specific because the bundled screenpipe helper is distributed per architecture. The current preview artifact is Apple Silicon (`MengoDesktop-macos-arm64.zip`). The x86_64 helper package exists upstream, and `build-mengo.sh` will select it on an Intel Mac, but Intel packaging remains unverified until it is built and smoke-tested on Intel hardware.
 
 ## Runtime Setup
