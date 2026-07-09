@@ -79,6 +79,12 @@ For tests:
 swift test
 ```
 
+For a terminal-only release status check against the current local artifact and draft GitHub release:
+
+```bash
+scripts/release-readiness-status.sh
+```
+
 The preview zip is host-architecture-specific because the bundled screenpipe helper is distributed per architecture. The current published preview artifact is Apple Silicon (`MengoDesktop-macos-arm64.zip`). The x86_64 helper package exists upstream, and `build-mengo.sh` will select it on an Intel Mac, but Intel packaging remains unverified until it is built and smoke-tested on Intel hardware.
 
 ## Runtime Setup
