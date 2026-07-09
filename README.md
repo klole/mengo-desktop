@@ -97,6 +97,8 @@ For Codex for OSS application facts:
 scripts/codex-oss-application-status.sh
 ```
 
+The copy-ready submission packet is in `docs/release/codex-for-oss-submission-packet.md`.
+
 The preview zip is host-architecture-specific because the bundled screenpipe helper is distributed per architecture. The current preview artifact is Apple Silicon (`MengoDesktop-macos-arm64.zip`). The x86_64 helper package exists upstream, and `build-mengo.sh` will select it on an Intel Mac, but Intel packaging remains unverified until it is built and smoke-tested on Intel hardware.
 
 ## Runtime Setup

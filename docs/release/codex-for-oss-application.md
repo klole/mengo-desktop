@@ -8,6 +8,8 @@ Refresh the GitHub facts immediately before submitting:
 scripts/codex-oss-application-status.sh
 ```
 
+For the final copy/paste packet, use `docs/release/codex-for-oss-submission-packet.md`.
+
 ## Copy-Ready Fields
 
 - GitHub username: `klole`
