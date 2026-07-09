@@ -17,7 +17,7 @@ MENGO_REQUIRE_MANUAL_SMOKE_COMPLETE=1 scripts/release-readiness-status.sh
 ## Fresh Install
 
 - [x] Scripted clean-home check: `HOME=$(mktemp -d) swift test` passes with 186 tests, 0 failures.
-- [x] Latest local full test run after Codex broken-MCP alert coverage: `swift test` passes with 193 tests, 0 failures.
+- [x] Latest local full test run after Codex broken-MCP alert coverage: `swift test` passes with 195 tests, 0 failures.
 - [x] Scripted local-preview app launch smoke: `scripts/smoke-app-launch.sh` starts `MengoDesktop.app` with a temporary home, local preview enabled, capture disabled, confirms the launch log, and terminates the app cleanly.
 - [x] Scripted published-asset smoke: `MENGO_RELEASE_DOWNLOAD_SMOKE=1 scripts/release-readiness-status.sh` downloads the release zip, verifies checksum, extracts `MengoDesktop.app` with `ditto`, runs codesign verification, and confirms the expected non-notarized Gatekeeper rejection.
 - [x] Scripted downloaded-app launch smoke: `MENGO_RELEASE_DOWNLOAD_LAUNCH_SMOKE=1 scripts/smoke-release-download.sh` launches the extracted release app in local preview mode with capture disabled, confirms the launch log, and terminates it cleanly.
@@ -91,6 +91,9 @@ scripts/smoke-clean-generated-skill.sh
 
 ## Account/Preview State
 
+- [x] Scripted signed-out launch smoke: `MENGO_APP_LAUNCH_ACCOUNT_MODE=signed-out scripts/smoke-app-launch.sh` starts with cached account state disabled and confirms the signed-out account log.
+- [x] Scripted free preview launch smoke: `MENGO_APP_LAUNCH_ACCOUNT_MODE=free scripts/smoke-app-launch.sh` confirms the free local-preview account log.
+- [x] Scripted pro preview launch smoke: `MENGO_APP_LAUNCH_ACCOUNT_MODE=pro scripts/smoke-app-launch.sh` confirms the pro local-preview account log.
 - [ ] Launch without preview account.
 - [ ] Click **Continue in local preview** and confirm the main app opens.
 - [ ] Launch with `MENGO_PREVIEW_ACCOUNT=free`.

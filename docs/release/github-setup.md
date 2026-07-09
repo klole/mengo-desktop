@@ -89,7 +89,7 @@ scripts/codex-oss-application-status.sh
 - Intended tag: `v0.1.0-preview`
 - Target: `v1-release-readiness`
 - Asset: `MengoDesktop-macos-arm64.zip`
-- Asset digest reported by GitHub: `sha256:2fc1238cc83c94cf79ce7b0e5732e587676e58e0b0d4b39a529f7c427a970327`
+- Asset digest reported by GitHub: `sha256:f96e3e8299a0c3e8a405a21a1077fc8b4f54576cf2cbdd1803e2ab6a6bc98423`
 - Status: published prerelease, explicitly non-notarized; release body has been synced with `docs/release/v0.1.0-preview.md`.
 
 Publish the non-notarized preview only with the guarded script:

@@ -26,12 +26,25 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertEqual(a.plan, .pro); XCTAssertNil(a.flowLimit)
         XCTAssertTrue(s.isLocalPreview)
     }
+    func test_previewEnvVar_signsInSyntheticFree() {
+        let s = make(env: ["MENGO_PREVIEW_ACCOUNT": "free"])
+        guard case .signedIn(let a) = s.state else { return XCTFail() }
+        XCTAssertEqual(a.plan, .free); XCTAssertEqual(a.flowLimit, 3)
+        XCTAssertTrue(s.isLocalPreview)
+    }
 
     func test_legacyDevEnvVar_stillSignsInSyntheticPro() {
         let s = make(env: ["MENGO_DEV_ACCOUNT": "pro"])
         guard case .signedIn(let a) = s.state else { return XCTFail() }
         XCTAssertEqual(a.plan, .pro); XCTAssertNil(a.flowLimit)
         XCTAssertTrue(s.isLocalPreview)
+    }
+    func test_disableCachedAccountEnv_startsSignedOutEvenWithCachedSession() {
+        let secrets = InMemorySecretStore(); secrets.set("sess", for: SecretKeys.sessionToken)
+        let cache = cacheURL()
+        try? JSONEncoder().encode(Account(email: "c@b.com", plan: .pro, flowLimit: nil)).write(to: cache)
+        let s = make(secrets: secrets, cache: cache, env: ["MENGO_DISABLE_CACHED_ACCOUNT": "1"])
+        XCTAssertEqual(s.state, .signedOut)
     }
 
     func test_startLocalPreview_signsInWithoutTokenOrCache() {

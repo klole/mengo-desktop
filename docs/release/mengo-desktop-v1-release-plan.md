@@ -57,7 +57,7 @@ Completed or improved:
 
 Current verification:
 
-- `swift test` passed: 193 tests, 0 failures.
+- `swift test` passed: 195 tests, 0 failures.
 - `./build-mengo.sh` passed.
 - `codesign --verify --deep --strict --verbose=2 MengoDesktop.app` passed.
 - `MengoDesktop.app/Contents/MacOS/MengoDesktop` and `Contents/Helpers/screenpipe` both report `arm64` in the latest local artifact.
@@ -71,14 +71,15 @@ Current verification:
 - Local in-app Codex smoke passed through record -> synthesize -> review -> persist: Codex generated `~/.claude/skills/record-mengo-flow-skill/`, Review loaded `SKILL.md` from the slug directory, and the library entry persisted `file:///Users/kylebell/.claude/skills/record-mengo-flow-skill/`.
 - Local Library -> Review -> Save UI smoke passed on the generated Codex skill: reopening from Library navigated to Flow review, Save exited review back to Flow idle, and the library entry stayed pointed at the slug directory.
 - `MENGO_APP_LAUNCH_SMOKE=1 scripts/release-readiness-status.sh` can include terminal app-launch coverage: it starts `MengoDesktop.app` in local preview mode with capture disabled, confirms the launch log, and terminates the app cleanly.
+- `MENGO_APP_LAUNCH_ACCOUNT_MODE=signed-out|free|pro scripts/smoke-app-launch.sh` verifies signed-out, free local-preview, and pro local-preview startup logs with capture disabled.
 - `MENGO_RELEASE_DOWNLOAD_LAUNCH_SMOKE=1 scripts/smoke-release-download.sh` launches the extracted published app in local preview mode with capture disabled, confirms the launch log, and terminates the app cleanly.
 - `MENGO_RELEASE_DOWNLOAD_SMOKE=1 MENGO_RELEASE_ASSET=MengoDesktop-macos-arm64.zip scripts/release-readiness-status.sh` passes on branch `v1-release-readiness`: local tests with timeout, codesign, checksum, published-asset download smoke, expected non-notarized Gatekeeper rejection, Codex positive/negative smoke, exact PR-head status, and release asset digest are green.
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
 - Architecture support status: `build-mengo.sh` supports host-specific `arm64` and `x86_64` packaging; the current local artifact and preview notes are Apple Silicon-only because Intel hardware smoke is still missing.
-- Latest local release asset checksum and published release asset digest: `sha256:2fc1238cc83c94cf79ce7b0e5732e587676e58e0b0d4b39a529f7c427a970327`.
-- Preview release downloads: 1 after the latest published-asset smoke.
+- Latest local release asset checksum and published release asset digest: `sha256:f96e3e8299a0c3e8a405a21a1077fc8b4f54576cf2cbdd1803e2ab6a6bc98423`.
+- Preview release downloads: 0 after replacing the preview asset.
 - Codex for OSS packet validation passes: answer character counts match the source text and stay under 500 characters, live GitHub/release metrics match the packet, and notarization/adoption caveats remain present.
-- Manual smoke status is now machine-summarized: `scripts/manual-smoke-status.sh` reports the current checklist as 18/62 complete, with open GUI/manual gates listed by section. `scripts/manual-smoke-status.sh --require-complete` fails until the full clean-user checklist is complete.
+- Manual smoke status is now machine-summarized: `scripts/manual-smoke-status.sh` reports the current checklist as 21/65 complete, with open GUI/manual gates listed by section. `scripts/manual-smoke-status.sh --require-complete` fails until the full clean-user checklist is complete.
 - One full `swift test` run transiently hung once, then the suspected focused test and a second full run passed. Watch for recurrence.
 
 Still open:

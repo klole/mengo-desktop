@@ -22,6 +22,7 @@ final class AccountStore {
     @ObservationIgnored private let secrets: SecretStore
     @ObservationIgnored private let cacheURL: URL
     @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private let logAccountState: Bool
 
     init(api: MengoAPI = MengoAPIClient(),
          secrets: SecretStore = KeychainStore(),
@@ -29,15 +30,19 @@ final class AccountStore {
          now: @escaping () -> Date = Date.init,
          env: [String: String] = ProcessInfo.processInfo.environment) {
         self.api = api; self.secrets = secrets; self.cacheURL = cacheURL; self.now = now
+        self.logAccountState = env["MENGO_LOG_ACCOUNT_STATE"] == "1"
 
         let preview = env["MENGO_PREVIEW_ACCOUNT"]?.lowercased() ?? env["MENGO_DEV_ACCOUNT"]?.lowercased()
+        let disableCachedAccount = env["MENGO_DISABLE_CACHED_ACCOUNT"] == "1"
         if let preview, preview == "pro" || preview == "free" {
             startLocalPreview(plan: preview == "pro" ? .pro : .free)
-        } else if secrets.get(SecretKeys.sessionToken) != nil, let cached = loadCachedAccount() {
+        } else if !disableCachedAccount, secrets.get(SecretKeys.sessionToken) != nil, let cached = loadCachedAccount() {
             state = .signedIn(cached)
+            logState("cached \(cached.plan.rawValue)")
             Task { await refresh() }
         } else {
             state = .signedOut
+            logState("signed-out")
         }
         AppDelegate.sharedAccount = self
     }
@@ -65,6 +70,12 @@ final class AccountStore {
                                   flowLimit: plan == .pro ? nil : 3,
                                   validatedAt: now()))
         lastError = nil
+        logState("local-preview \(plan.rawValue)")
+    }
+
+    private func logState(_ value: String) {
+        guard logAccountState else { return }
+        Log.line("account state: \(value)")
     }
 
     func sendMagicLink(email: String) async {

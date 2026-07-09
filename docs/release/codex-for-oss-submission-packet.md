@@ -31,8 +31,8 @@ scripts/validate-codex-oss-packet.sh
 - Release: `v0.1.0-preview`, published prerelease.
 - Release URL: `https://github.com/klole/mengo-desktop/releases/tag/v0.1.0-preview`.
 - Release asset: `MengoDesktop-macos-arm64.zip`.
-- Release asset digest: `sha256:2fc1238cc83c94cf79ce7b0e5732e587676e58e0b0d4b39a529f7c427a970327`.
-- Release downloads: 1.
+- Release asset digest: `sha256:f96e3e8299a0c3e8a405a21a1077fc8b4f54576cf2cbdd1803e2ab6a6bc98423`.
+- Release downloads: 0.
 - Notarization: not complete; the preview is explicitly non-notarized.
 
 ## Why This Repository Qualifies
@@ -69,7 +69,7 @@ The repo is early but active: PR #8 prepares a clean V1 preview with MIT license
 
 ## Do Not Claim
 
-- Do not claim broad adoption; current metrics are 0 stars, 0 forks, and 1 release download.
+- Do not claim broad adoption; current metrics are 0 stars, 0 forks, and 0 release downloads.
 - Do not claim notarization; the current preview is explicitly non-notarized.
 - Do not claim Codex is the default runtime until the in-app broken-runtime GUI alert and clean-user manual matrix pass.
 - Do not claim Intel artifact support until an Intel-built artifact is smoke-tested.

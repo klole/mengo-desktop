@@ -84,6 +84,9 @@ For a terminal-only release status check against the current local artifact and 
 ```bash
 scripts/release-readiness-status.sh
 MENGO_APP_LAUNCH_SMOKE=1 scripts/release-readiness-status.sh
+MENGO_APP_LAUNCH_ACCOUNT_MODE=signed-out scripts/smoke-app-launch.sh
+MENGO_APP_LAUNCH_ACCOUNT_MODE=free scripts/smoke-app-launch.sh
+MENGO_APP_LAUNCH_ACCOUNT_MODE=pro scripts/smoke-app-launch.sh
 MENGO_RELEASE_DOWNLOAD_SMOKE=1 scripts/release-readiness-status.sh
 MENGO_RELEASE_DOWNLOAD_LAUNCH_SMOKE=1 scripts/smoke-release-download.sh
 ```
