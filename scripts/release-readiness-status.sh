@@ -132,6 +132,16 @@ fi
 pass "Generated skill smoke"
 
 echo
+echo "==> Manual smoke checklist"
+"$ROOT/scripts/manual-smoke-status.sh"
+if [ "${MENGO_REQUIRE_MANUAL_SMOKE_COMPLETE:-0}" = "1" ]; then
+    "$ROOT/scripts/manual-smoke-status.sh" --require-complete >/dev/null
+    pass "manual smoke checklist complete"
+else
+    echo "SKIP: set MENGO_REQUIRE_MANUAL_SMOKE_COMPLETE=1 to require every manual smoke item before a final V1 release"
+fi
+
+echo
 echo "==> Notarization preflight"
 if "$ROOT/scripts/notarize-mengo.sh" --check; then
     pass "notarization preflight"

@@ -2,6 +2,18 @@
 
 Run this checklist before publishing a V1 or V1-preview release.
 
+To summarize the current checklist state and produce the exact remaining blocker list:
+
+```bash
+scripts/manual-smoke-status.sh
+```
+
+For a final V1 release gate, require the checklist to be complete:
+
+```bash
+MENGO_REQUIRE_MANUAL_SMOKE_COMPLETE=1 scripts/release-readiness-status.sh
+```
+
 ## Fresh Install
 
 - [x] Scripted clean-home check: `HOME=$(mktemp -d) swift test` passes with 186 tests, 0 failures.
