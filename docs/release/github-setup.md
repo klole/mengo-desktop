@@ -60,6 +60,7 @@ Do not publish the preview release until:
 - `spctl --assess --type execute -vv MengoDesktop.app` result is documented.
 - `docs/release/v0.1.0-preview.md` checksum is regenerated from the final zip.
 - `scripts/release-readiness-status.sh` passes.
+- The explicit non-notarized preview publish decision is made.
 - After publishing, `MENGO_EXPECT_RELEASE_DRAFT=0 scripts/release-readiness-status.sh` passes.
 - Manual smoke test status is recorded in `docs/manual-smoke-tests/mengo-v1.md`.
 
@@ -84,3 +85,9 @@ Do not publish the preview release until:
 - Asset: `MengoDesktop-macos-arm64.zip`
 - Asset digest reported by GitHub: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`
 - Status: draft, prerelease, not published; release body has been synced with `docs/release/v0.1.0-preview.md`.
+
+Publish the non-notarized preview only with the guarded script:
+
+```bash
+MENGO_PUBLISH_NON_NOTARIZED_PREVIEW=1 scripts/publish-preview-release.sh
+```
