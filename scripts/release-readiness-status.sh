@@ -3,12 +3,16 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$ROOT/MengoDesktop.app"
-ZIP="$ROOT/MengoDesktop-macos-arm64.zip"
+RELEASE_ARCH="${MENGO_RELEASE_ARCH:-$(uname -m)}"
+RELEASE_ASSET="${MENGO_RELEASE_ASSET:-MengoDesktop-macos-$RELEASE_ARCH.zip}"
+ZIP="$ROOT/$RELEASE_ASSET"
 RELEASE_NOTES="$ROOT/docs/release/v0.1.0-preview.md"
 REPO="${GITHUB_REPOSITORY:-klole/mengo-desktop}"
 PR_NUMBER="${MENGO_RELEASE_PR:-8}"
 RELEASE_TAG="${MENGO_RELEASE_TAG:-v0.1.0-preview}"
 EXPECT_RELEASE_DRAFT="${MENGO_EXPECT_RELEASE_DRAFT:-0}"
+TMPDIR_STATUS="$(mktemp -d "${TMPDIR:-/tmp}/mengo-release-status.XXXXXX")"
+trap 'rm -rf "$TMPDIR_STATUS"' EXIT
 
 fail() {
     echo "FAIL: $*" >&2
@@ -42,7 +46,7 @@ codesign --verify --deep --strict --verbose=2 "$APP"
 pass "codesign verification"
 
 LOCAL_SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
-NOTES_SHA="$(grep -Eo '^[0-9a-f]{64}  MengoDesktop-macos-arm64.zip$' "$RELEASE_NOTES" | awk '{print $1}' | tail -1)"
+NOTES_SHA="$(grep -Eo "^[0-9a-f]{64}  $RELEASE_ASSET$" "$RELEASE_NOTES" | awk '{print $1}' | tail -1)"
 [ -n "$NOTES_SHA" ] || fail "could not find release-notes checksum"
 if [ "$LOCAL_SHA" != "$NOTES_SHA" ]; then
     fail "local zip checksum $LOCAL_SHA does not match release notes $NOTES_SHA"
@@ -57,11 +61,12 @@ else
     echo "SKIP: set MENGO_RELEASE_DOWNLOAD_SMOKE=1 to download and verify the published release asset"
 fi
 
-if spctl --assess --type execute -vv "$APP" >/tmp/mengo-spctl.out 2>&1; then
+SPCTL_OUT="$TMPDIR_STATUS/spctl.out"
+if spctl --assess --type execute -vv "$APP" >"$SPCTL_OUT" 2>&1; then
     pass "Gatekeeper assessment passed"
 else
-    cat /tmp/mengo-spctl.out
-    if grep -qi "not notarized" "$RELEASE_NOTES" && grep -qi "rejected" /tmp/mengo-spctl.out; then
+    cat "$SPCTL_OUT"
+    if grep -qi "not notarized" "$RELEASE_NOTES" && grep -qi "rejected" "$SPCTL_OUT"; then
         pass "Gatekeeper rejection is documented for non-notarized preview"
     else
         fail "Gatekeeper rejected app and release notes do not document expected non-notarized preview"

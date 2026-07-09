@@ -53,11 +53,12 @@ echo "Downloaded app codesign verification passed."
 
 echo
 echo "==> Checking Gatekeeper status"
-if spctl --assess --type execute -vv "$APP" >/tmp/mengo-download-spctl.out 2>&1; then
+SPCTL_OUT="$TMPDIR_SMOKE/spctl.out"
+if spctl --assess --type execute -vv "$APP" >"$SPCTL_OUT" 2>&1; then
     echo "Downloaded app passed Gatekeeper assessment."
 else
-    cat /tmp/mengo-download-spctl.out
-    if grep -qi "not notarized" "$RELEASE_NOTES" && grep -qi "rejected" /tmp/mengo-download-spctl.out; then
+    cat "$SPCTL_OUT"
+    if grep -qi "not notarized" "$RELEASE_NOTES" && grep -qi "rejected" "$SPCTL_OUT"; then
         echo "Downloaded app Gatekeeper rejection is expected for the non-notarized preview."
     else
         fail "downloaded app Gatekeeper result is not documented as expected"
