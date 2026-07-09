@@ -73,9 +73,9 @@ pass "Codex scripted smoke"
 
 echo
 echo "==> Generated skill smoke"
-"$ROOT/scripts/smoke-generated-skill.sh"
+MENGO_SKILL_SMOKE_RUN_MODEL=0 MENGO_SKILL_SMOKE_INVOKE=0 "$ROOT/scripts/smoke-generated-skill.sh"
 if [ "${MENGO_SKILL_SMOKE_RUN_MODEL:-0}" = "1" ]; then
-    MENGO_SKILL_SMOKE_RUN_MODEL=1 "$ROOT/scripts/smoke-generated-skill.sh"
+    MENGO_SKILL_SMOKE_RUN_MODEL=1 MENGO_SKILL_SMOKE_INVOKE=0 "$ROOT/scripts/smoke-generated-skill.sh"
     if [ "${MENGO_SKILL_SMOKE_INVOKE:-0}" = "1" ]; then
         MENGO_SKILL_SMOKE_RUN_MODEL=1 MENGO_SKILL_SMOKE_INVOKE=1 "$ROOT/scripts/smoke-generated-skill.sh"
     fi
