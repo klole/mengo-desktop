@@ -42,7 +42,7 @@ Completed or improved:
 - Added `scripts/release-readiness-status.sh` for repeatable terminal release-gate checks.
 - Added `scripts/smoke-release-download.sh` for repeatable published-asset download, checksum, `ditto` extraction, codesign, and expected Gatekeeper-result verification.
 - Hardened the release-readiness scripts so the asset name is configurable, Gatekeeper scratch output stays in per-run temp directories, and the GitHub PR head must match local `HEAD` before the gate can pass.
-- Added CI timeouts and a local `swift test` timeout in `scripts/release-readiness-status.sh` so transient test hangs fail explicitly instead of blocking release verification indefinitely.
+- Added CI timeouts and a local `swift test` timeout in `scripts/release-readiness-status.sh` so transient test hangs fail explicitly instead of blocking release verification indefinitely. The local timeout now cleans up child `xctest` processes as well as the `swift test` parent.
 - Added `scripts/publish-preview-release.sh` for guarded non-notarized preview publication plus post-publish verification.
 - Added `scripts/codex-oss-application-status.sh` for repeatable GitHub metric refresh before submission.
 - Added `scripts/validate-codex-oss-packet.sh` to verify Codex for OSS answer character counts and live metric consistency before submission.

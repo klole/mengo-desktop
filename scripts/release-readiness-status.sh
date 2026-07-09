@@ -24,6 +24,16 @@ pass() {
     echo "PASS: $*"
 }
 
+kill_tree() {
+    local root_pid="$1"
+    local child_pid
+
+    for child_pid in $(pgrep -P "$root_pid" 2>/dev/null || true); do
+        kill_tree "$child_pid"
+    done
+    kill "$root_pid" 2>/dev/null || true
+}
+
 run_with_timeout() {
     local timeout_seconds="$1"
     shift
@@ -39,8 +49,11 @@ run_with_timeout() {
         elapsed="$(( $(date +%s) - start ))"
         if [ "$elapsed" -ge "$timeout_seconds" ]; then
             echo "ERROR: command timed out after ${timeout_seconds}s: $*" >&2
-            kill "$pid" 2>/dev/null || true
+            kill_tree "$pid"
             sleep 2
+            for child_pid in $(pgrep -P "$pid" 2>/dev/null || true); do
+                kill -9 "$child_pid" 2>/dev/null || true
+            done
             kill -9 "$pid" 2>/dev/null || true
             wait "$pid" 2>/dev/null || true
             return 124
