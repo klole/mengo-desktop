@@ -41,6 +41,7 @@ Completed or improved:
 - Added `scripts/release-readiness-status.sh` for repeatable terminal release-gate checks.
 - Added `scripts/smoke-release-download.sh` for repeatable published-asset download, checksum, `ditto` extraction, codesign, and expected Gatekeeper-result verification.
 - Hardened the release-readiness scripts so the asset name is configurable, Gatekeeper scratch output stays in per-run temp directories, and the GitHub PR head must match local `HEAD` before the gate can pass.
+- Added CI timeouts and a local `swift test` timeout in `scripts/release-readiness-status.sh` so transient test hangs fail explicitly instead of blocking release verification indefinitely.
 - Added `scripts/publish-preview-release.sh` for guarded non-notarized preview publication plus post-publish verification.
 - Added `scripts/codex-oss-application-status.sh` for repeatable GitHub metric refresh before submission.
 - Verified `@screenpipe/cli-darwin-x64` package availability in npm, but documented the preview release as Apple Silicon-only until an Intel-built artifact is smoke-tested on Intel hardware.
@@ -58,7 +59,7 @@ Current verification:
 - `codesign --verify --deep --strict --verbose=2 MengoDesktop.app` passed.
 - `MengoDesktop.app/Contents/MacOS/MengoDesktop` and `Contents/Helpers/screenpipe` both report `arm64` in the latest local artifact.
 - `spctl --assess --type execute -vv MengoDesktop.app` still rejects the app because the build is ad-hoc/self-signed and not notarized.
-- GitHub Actions macOS `build-test` passes on the V1 readiness PR.
+- GitHub Actions macOS `build-test` passes on the V1 readiness PR, with job/build/test timeouts configured.
 - Current local keychain has an Apple Development signing identity only; `scripts/notarize-mengo.sh --check` reports that a Developer ID Application certificate and notarytool credentials are still required to complete notarization. The script now verifies Developer ID plus hardened runtime, stapled app validation, extracted-final-zip Gatekeeper assessment, and final SHA-256 output once credentials are present.
 - Codex CLI scripted preflight passes locally after adding `screenpipe` MCP: `codex-cli 0.143.0`, `codex mcp list` includes `screenpipe`, and `codex exec --output-last-message` writes the final JSON line Mengo parses.
 - Codex scripted negative smoke passes: `MENGO_CODEX_SMOKE_NEGATIVE=missing-mcp scripts/smoke-codex-runtime.sh` simulates a missing screenpipe MCP and verifies the setup command is printed.
@@ -66,7 +67,7 @@ Current verification:
 - Generated-skill file/read/invocation smoke passes: `scripts/smoke-generated-skill.sh` verifies the generated skill directory, `SKILL.md`, and valid `flow.json`; `MENGO_SKILL_SMOKE_RUN_MODEL=1 scripts/smoke-generated-skill.sh` returned `{"status":"ok","readSkill":true,"readFlow":true}` from Codex; `MENGO_SKILL_SMOKE_RUN_MODEL=1 MENGO_SKILL_SMOKE_INVOKE=1 scripts/smoke-generated-skill.sh` returned `{"status":"ok","readSkill":true,"readFlow":true,"invoked":true,"stepCount":5}` from Codex; `scripts/smoke-clean-generated-skill.sh` copied the generated skill into a temporary `.claude/skills` home and Codex invoked the copied skill successfully.
 - Local in-app Codex smoke passed through record -> synthesize -> review -> persist: Codex generated `~/.claude/skills/record-mengo-flow-skill/`, Review loaded `SKILL.md` from the slug directory, and the library entry persisted `file:///Users/kylebell/.claude/skills/record-mengo-flow-skill/`.
 - Local Library -> Review -> Save UI smoke passed on the generated Codex skill: reopening from Library navigated to Flow review, Save exited review back to Flow idle, and the library entry stayed pointed at the slug directory.
-- `MENGO_RELEASE_DOWNLOAD_SMOKE=1 MENGO_RELEASE_ASSET=MengoDesktop-macos-arm64.zip scripts/release-readiness-status.sh` passes on branch `v1-release-readiness`: local tests, codesign, checksum, published-asset download smoke, expected non-notarized Gatekeeper rejection, Codex positive/negative smoke, exact PR-head status, and release asset digest are green.
+- `MENGO_RELEASE_DOWNLOAD_SMOKE=1 MENGO_RELEASE_ASSET=MengoDesktop-macos-arm64.zip scripts/release-readiness-status.sh` passes on branch `v1-release-readiness`: local tests with timeout, codesign, checksum, published-asset download smoke, expected non-notarized Gatekeeper rejection, Codex positive/negative smoke, exact PR-head status, and release asset digest are green.
 - Clean-account scripted check passes: `HOME=$(mktemp -d) swift test` completed with 186 tests, 0 failures.
 - Architecture support status: `build-mengo.sh` supports host-specific `arm64` and `x86_64` packaging; the current local artifact and preview notes are Apple Silicon-only because Intel hardware smoke is still missing.
 - Latest local release asset checksum and published release asset digest: `sha256:e4d3b21192ac76d1e68aca0cfde4243464f071a4787b8572fd1fe93739c054bd`.

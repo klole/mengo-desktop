@@ -11,6 +11,7 @@ REPO="${GITHUB_REPOSITORY:-klole/mengo-desktop}"
 PR_NUMBER="${MENGO_RELEASE_PR:-8}"
 RELEASE_TAG="${MENGO_RELEASE_TAG:-v0.1.0-preview}"
 EXPECT_RELEASE_DRAFT="${MENGO_EXPECT_RELEASE_DRAFT:-0}"
+SWIFT_TEST_TIMEOUT_SECONDS="${MENGO_SWIFT_TEST_TIMEOUT_SECONDS:-600}"
 TMPDIR_STATUS="$(mktemp -d "${TMPDIR:-/tmp}/mengo-release-status.XXXXXX")"
 trap 'rm -rf "$TMPDIR_STATUS"' EXIT
 
@@ -21,6 +22,33 @@ fail() {
 
 pass() {
     echo "PASS: $*"
+}
+
+run_with_timeout() {
+    local timeout_seconds="$1"
+    shift
+    local pid
+    local start
+    local elapsed
+
+    "$@" &
+    pid="$!"
+    start="$(date +%s)"
+
+    while kill -0 "$pid" 2>/dev/null; do
+        elapsed="$(( $(date +%s) - start ))"
+        if [ "$elapsed" -ge "$timeout_seconds" ]; then
+            echo "ERROR: command timed out after ${timeout_seconds}s: $*" >&2
+            kill "$pid" 2>/dev/null || true
+            sleep 2
+            kill -9 "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            return 124
+        fi
+        sleep 1
+    done
+
+    wait "$pid"
 }
 
 echo "==> Git state"
@@ -36,7 +64,7 @@ pass "working tree clean on $BRANCH at $LOCAL_HEAD"
 
 echo
 echo "==> Tests"
-swift test
+run_with_timeout "$SWIFT_TEST_TIMEOUT_SECONDS" swift test
 pass "swift test"
 
 echo
