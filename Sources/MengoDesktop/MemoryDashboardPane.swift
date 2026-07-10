@@ -1,17 +1,13 @@
 import SwiftUI
-import AppKit
 
 /// The Memory Dashboard — full rewrite of the old `MemoryPane`. Two-column
 /// layout: a center column (hero + middle cards + quick actions) and a
 /// right rail (live activity feed). When the window is narrower than the
 /// `narrowBreakpoint`, the rail collapses below the center column.
 ///
-/// Part B lands the hero + right rail; the four middle cards are
-/// placeholders until Parts C and D fill them in.
 struct MemoryDashboardPane: View {
     let appState: AppState
     let recorder: RecorderController
-    let account: AccountStore
     let settings: SettingsStore
     let store: MemoryDashboardStore
 
@@ -44,8 +40,7 @@ struct MemoryDashboardPane: View {
                         onConfigureSources: { showAdvancedSources = true },
                         onCreateFlow:       { appState.selectedSection = .flow },
                         onTrainSkill:       { appState.selectedSection = .flow },
-                        onOpenStudio:       { openStudio() },
-                        onImportWorkflow:   { importWorkflow() }
+                        onOpenStudio:       { openStudio() }
                     )
                     if !useRail {
                         ActivityFeedView(store: store, onViewAll: { listSheet = .activity })
@@ -88,8 +83,6 @@ struct MemoryDashboardPane: View {
         case .createSkill, .createFlow:
             appState.selectedSection = .flow
         case .viewMemory:
-            // Time-range filter on MemoryListPage is a follow-up; for v1 the
-            // CTA opens the full activity list and the user can scroll.
             listSheet = .activity
         case .seeDetails:
             listSheet = .activity
@@ -99,23 +92,6 @@ struct MemoryDashboardPane: View {
     // MARK: - Quick Actions routes
 
     private func openStudio() {
-        if account.isPro {
-            appState.selectedSection = .studio
-        } else {
-            Task { NSWorkspace.shared.open(await account.webURL(path: "/upgrade")) }
-        }
-    }
-
-    private func importWorkflow() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.json]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.title = "Import workflow"
-        if panel.runModal() == .OK, let url = panel.url {
-            Log.line("Import workflow: \(url.path) — full import lands in the Studio phase.")
-        }
+        appState.selectedSection = .studio
     }
 }
-

@@ -15,7 +15,7 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+	<string>2.0.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleIconFile</key>
@@ -32,17 +32,6 @@
     <string>Captures your screen so Mengo Memory can index what you see. Data stays on your Mac.</string>
     <key>NSCameraUsageDescription</key>
     <string>Required by macOS screen capture on some systems.</string>
-    <key>CFBundleURLTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleURLName</key>
-            <string>ai.mengo.desktop</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>mengo</string>
-            </array>
-        </dict>
-    </array>
     <key>NSAppTransportSecurity</key>
     <dict>
         <!-- Allow http://127.0.0.1:3030 — the local screenpipe HTTP API. -->

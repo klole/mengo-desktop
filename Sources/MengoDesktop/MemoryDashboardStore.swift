@@ -11,14 +11,8 @@ protocol MemoryDashboardSource: ActivityFeedSource {
 
 extension MemoryDB: MemoryDashboardSource {}
 
-/// Owns the displayable state for `MemoryDashboardPane`. Refreshes the data
-/// derived from the recorder DB on demand (and, in Part B+, on a 60-s timer).
-///
-/// Part A — what's here today:
-///   - `topApps`            populated from `db.topApps`
-///   - `recentSessions`     populated from `db.recentFrames` + SessionsService
-///   - `recentActivity`     placeholder; the activity-stream consumer lands in B4
-///   - `insights`           placeholder; populated by `InsightsEngine` in D1
+/// Owns the displayable state for `MemoryDashboardPane`. Refreshes recorder
+/// summaries on a 60-second timer and consumes the live activity stream.
 @Observable
 @MainActor
 final class MemoryDashboardStore {
@@ -46,10 +40,8 @@ final class MemoryDashboardStore {
         self.db = db
         self.settings = settings
         self.activityStream = activityStream ?? ActivityFeedStream(source: db)
-        // Default polisher: no-op (throws). The production polisher that
-        // shells out to the user's Claude Code / Codex CLI lands as a
-        // follow-up — the heuristic Pass 1 already produces a useful card
-        // body, so this gracefully degrades.
+        // The default stays entirely on-device: InsightsEngine's deterministic
+        // first pass produces the card, and this optional polishing pass is skipped.
         self.insightsPolisher = insightsPolisher ?? { _ in
             throw InsightsPolisherError.notConfigured
         }

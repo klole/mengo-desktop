@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# install.sh — installs ScreenpipeMenu (always-on recorder) AND ScreenpipeFlow
-# (demonstration-to-skill recorder) into ~/Applications, then launches both.
+# install.sh — installs Mengo Desktop into ~/Applications, then launches it.
 # Run from inside this repo. No sudo needed. macOS 15 / arm64 only.
 set -euo pipefail
 
+APP_NAME="MengoDesktop"
 APPS_DIR="$HOME/Applications"
-MENU_APP="$APPS_DIR/ScreenpipeMenu.app"
-FLOW_APP="$APPS_DIR/ScreenpipeFlow.app"
+APP_DEST="$APPS_DIR/$APP_NAME.app"
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
 
@@ -20,51 +19,55 @@ fi
 
 ARCH=$(uname -m)
 if [ "$ARCH" != "arm64" ]; then
-    echo "ERROR: this build is Apple-Silicon only (arm64). You're on $ARCH."
-    echo "       Rebuild from source with the matching arch — see README.md."
+    echo "ERROR: Apple Silicon (arm64) only. You're on $ARCH."
     exit 1
 fi
 
 mkdir -p "$APPS_DIR"
-rm -rf "$MENU_APP" "$FLOW_APP"
 
 ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
 REPO_SLUG=$(echo "$ORIGIN_URL" | sed -E 's|.*github.com[/:]([^/]+/[^/.]+)(\.git)?|\1|')
 
-# Both apps share a release. We download the asset names containing each app name.
-fetch_release_url() {
-    local app_name=$1
-    if [ -z "$REPO_SLUG" ]; then echo ""; return; fi
+# Find the signed app archive and its checksum in the latest GitHub release.
+fetch_release_assets() {
+    if [ -z "$REPO_SLUG" ]; then return; fi
     curl -fsSL "https://api.github.com/repos/$REPO_SLUG/releases/latest" 2>/dev/null \
         | python3 -c "
 import json, sys
 try:
     d = json.load(sys.stdin)
-    for a in d.get('assets', []):
-        if a['name'].startswith('$app_name') and a['name'].endswith('.zip'):
-            print(a['browser_download_url']); break
+    assets = {a['name']: a['browser_download_url'] for a in d.get('assets', [])}
+    archive = assets.get('$APP_NAME.zip')
+    checksum = assets.get('$APP_NAME.zip.sha256')
+    if archive and checksum:
+        print(archive, checksum)
 except Exception:
     pass
-" || echo ""
+" || true
 }
 
 install_app_from_url() {
     local url=$1
-    local dest=$2
-    local zipname=$(basename "$url")
-    local appname=$(basename "$dest")
-    local tmp=$(mktemp -d)
+    local checksum_url=$2
+    local zipname; zipname=$(basename "$url")
+    local tmp; tmp=$(mktemp -d)
     trap "rm -rf '$tmp'" RETURN
     curl -fsSL "$url" -o "$tmp/$zipname"
+    curl -fsSL "$checksum_url" -o "$tmp/$APP_NAME.zip.sha256"
+    (cd "$tmp" && shasum -a 256 -c "$APP_NAME.zip.sha256")
     ditto -x -k "$tmp/$zipname" "$tmp/extracted"
-    mv "$tmp/extracted/$appname" "$dest"
+    local candidate="$tmp/extracted/$APP_NAME.app"
+    [ -d "$candidate" ] || { echo "ERROR: release archive does not contain $APP_NAME.app"; exit 1; }
+    codesign --verify --deep --strict "$candidate"
+    spctl --assess --type execute "$candidate"
+    rm -rf "$APP_DEST"
+    ditto "$candidate" "$APP_DEST"
 }
 
 build_from_source() {
     if ! command -v swift >/dev/null 2>&1; then
         echo "ERROR: swift not found. Install Xcode 16+ from the App Store, then run:"
         echo "       xcode-select --install"
-        echo "       sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
         exit 1
     fi
     SWIFT_MAJOR=$(swift --version 2>&1 | grep -oE 'Swift version [0-9]+' | awk '{print $3}' || echo 0)
@@ -72,68 +75,50 @@ build_from_source() {
         echo "ERROR: Swift 6+ required (found ${SWIFT_MAJOR}). Update Xcode to 16+."
         exit 1
     fi
-    ./build.sh
-    mv ScreenpipeMenu.app "$MENU_APP"
-    ./build-flow.sh
-    mv ScreenpipeFlow.app "$FLOW_APP"
+    ./build-mengo.sh
+    local tmp; tmp=$(mktemp -d)
+    trap "rm -rf '$tmp'" RETURN
+    ditto -x -k MengoDesktop.zip "$tmp"
+    codesign --verify --deep --strict "$tmp/MengoDesktop.app"
+    rm -rf "$APP_DEST"
+    ditto "$tmp/MengoDesktop.app" "$APP_DEST"
+    codesign --verify --deep --strict "$APP_DEST"
 }
 
-MENU_URL=$(fetch_release_url "ScreenpipeMenu")
-FLOW_URL=$(fetch_release_url "ScreenpipeFlow")
+read -r URL CHECKSUM_URL < <(fetch_release_assets || true) || true
+URL=${URL:-}
+CHECKSUM_URL=${CHECKSUM_URL:-}
 
-if [ -n "$MENU_URL" ] && [ -n "$FLOW_URL" ]; then
-    echo "==> Downloading pre-built releases"
-    echo "    Menu: $MENU_URL"
-    echo "    Flow: $FLOW_URL"
-    install_app_from_url "$MENU_URL" "$MENU_APP"
-    install_app_from_url "$FLOW_URL" "$FLOW_APP"
+if [ -n "$URL" ]; then
+    echo "==> Downloading prebuilt release: $URL"
+    install_app_from_url "$URL" "$CHECKSUM_URL"
 else
-    echo "==> No prebuilt release with both apps — building from source"
+    echo "==> No verified prebuilt release found — building from source"
     build_from_source
 fi
 
-echo "==> Removing quarantine"
-xattr -dr com.apple.quarantine "$MENU_APP" 2>/dev/null || true
-xattr -dr com.apple.quarantine "$FLOW_APP" 2>/dev/null || true
-
 echo "==> Stopping any prior instances"
-osascript -e 'tell application "ScreenpipeMenu" to quit' 2>/dev/null || true
-osascript -e 'tell application "ScreenpipeFlow" to quit' 2>/dev/null || true
-pkill -f "ScreenpipeMenu" 2>/dev/null || true
-pkill -f "ScreenpipeFlow" 2>/dev/null || true
+osascript -e 'tell application "MengoDesktop" to quit' 2>/dev/null || true
+pkill -f "MengoDesktop.app/Contents/MacOS" 2>/dev/null || true
 pkill -f "Helpers/screenpipe record" 2>/dev/null || true
 sleep 2
 
-echo "==> Launching ScreenpipeMenu (recorder)"
-open "$MENU_APP"
-
-echo "==> Waiting 10s for screenpipe to come online before launching ScreenpipeFlow…"
-sleep 10
-echo "==> Launching ScreenpipeFlow (skill recorder)"
-open "$FLOW_APP"
+echo "==> Launching Mengo Desktop"
+open "$APP_DEST"
 
 cat <<'EOF'
 
-✓ Installed:
-  ~/Applications/ScreenpipeMenu.app   (always-on recorder)
-  ~/Applications/ScreenpipeFlow.app   (demonstration-to-skill recorder)
+✓ Installed: ~/Applications/MengoDesktop.app
 
-Two things you need to do RIGHT NOW:
+Two things to do right now:
 
-  1. A Screen Recording permission dialog will appear (or has already).
-     Click "Open System Settings", find ScreenpipeMenu in the list,
+  1. macOS will ask for Screen Recording permission.
+     Click "Open System Settings", find MengoDesktop in the list,
      toggle it ON, then close System Settings.
 
-  2. Accept the Microphone prompt.
+  2. Accept the Microphone prompt when it appears.
 
-After both are granted, look in your menu bar (top-right):
-  - ScreenpipeMenu turns green and says "Recording" within ~15 seconds
-  - ScreenpipeFlow shows a "Flow" label — click for Start/Grab options
-
-To use ScreenpipeFlow:
-  - "Start recording" → narrate your task → Stop → wait ~30s for synthesis
-  - "Grab last 5 minutes…" → pick a start point → continue narrating
-
-Skills land in ~/.claude/skills/<slug>/ and are invokable via Claude Code.
+After both are granted, Mengo will start recording locally — nothing
+leaves your Mac. Open the app to see Memory, Flow, Library, and Studio.
 
 EOF

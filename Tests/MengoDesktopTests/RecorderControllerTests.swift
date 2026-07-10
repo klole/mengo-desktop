@@ -199,7 +199,7 @@ final class RecorderControllerTests: XCTestCase {
         let c = makeController(process: proc, store: store, catalog: StubCatalog(monitors: [monitor(1)]))
         await c.start()
         await eventually { c.status == .recording }
-        XCTAssertEqual(proc.lastExtraArguments, ["--monitor-id", "1", "--fps", "1.0"])   // 9 dropped
+        XCTAssertEqual(proc.lastExtraArguments, ["--monitor-id", "1"])   // 9 dropped
     }
 
     func test_sourceArgs_emptyMonitorsAfterValidation_fallsBackToAll() async {
@@ -228,7 +228,7 @@ final class RecorderControllerTests: XCTestCase {
         await c.start()
         await eventually { c.status == .recording }
         XCTAssertEqual(proc.lastExtraArguments,
-                       ["--audio-device", "Mic A (input)", "--audio-device", "System Audio (output)", "--fps", "1.0"])
+                       ["--audio-device", "Mic A (input)", "--audio-device", "System Audio (output)"])
     }
 
     func test_applyRecordingSources_restartsWithNewArgs() async {
@@ -244,19 +244,19 @@ final class RecorderControllerTests: XCTestCase {
         await c.applyRecordingSources()
         await eventually { c.status == .recording }
         XCTAssertEqual(proc.startCount, startsBefore + 1)
-        XCTAssertEqual(proc.lastExtraArguments, ["--monitor-id", "2", "--disable-audio", "--fps", "1.0"])
+        XCTAssertEqual(proc.lastExtraArguments, ["--monitor-id", "2", "--disable-audio"])
         XCTAssertEqual(c.runningMonitorIDs, [2])
         XCTAssertTrue(c.runningAudioDisabled)
     }
 
-    func test_captureMode_appendsCorrectFlags() async {
+    func test_captureMode_doesNotAppendUnsupportedFlags() async {
         let proc = StubProcess()
         let c = makeController(process: proc, captureMode: .allChanges)
         await c.start()
         await eventually { c.status == .recording }
-        XCTAssertTrue(proc.lastExtraArguments.contains("--fps"))
-        XCTAssertTrue(proc.lastExtraArguments.contains("2.0"),
-                      "allChanges should set --fps 2.0; got \(proc.lastExtraArguments)")
+        XCTAssertFalse(proc.lastExtraArguments.contains("--fps"))
+        XCTAssertTrue(proc.lastExtraArguments.isEmpty,
+                      "capture mode should not pass unsupported recorder flags; got \(proc.lastExtraArguments)")
     }
 
     // MARK: - applySchedule (D4)

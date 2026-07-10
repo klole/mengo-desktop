@@ -1,18 +1,18 @@
 import SwiftUI
 
 /// The main window: a logo-wordmark header over the section sidebar, with the
-/// detail column showing the selected section's pane (real `MemoryPane` for
-/// `.memory`, placeholders otherwise). Sidebar selection lives in `AppState`.
+/// detail column showing the selected section's product pane. Sidebar selection
+/// lives in `AppState`.
 /// The sidebar rows are hand-drawn (rather than a `List(selection:)`) so the
 /// selected-row highlight can be the brand orange — macOS sidebar lists otherwise
 /// paint the selection in the system accent and ignore SwiftUI `.tint`.
 struct MainWindowView: View {
     let appState: AppState
     let recorder: RecorderController
-    let account: AccountStore
     let settings: SettingsStore
     let flow: FlowController
     let memoryDashboard: MemoryDashboardStore
+    let studio: StudioController
 
     var body: some View {
         NavigationSplitView {
@@ -29,17 +29,6 @@ struct MainWindowView: View {
                 }
                 Spacer(minLength: 8)
                 VStack(spacing: 8) {
-                    if !account.isPro {
-                        Button {
-                            Task { NSWorkspace.shared.open(await account.webURL(path: "/upgrade")) }
-                        } label: {
-                            Label("Purchase Mengo Pro", systemImage: "sparkles")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent).tint(Theme.accent)
-                        Text("\(flow.library.filter(\.exists).count) of \(account.flowLimit ?? 3) free flows used")
-                            .font(Theme.caption).foregroundStyle(Theme.mutedText)
-                    }
                     sidebarRow(.settings)
                 }
                 .padding(.horizontal, 8).padding(.bottom, 10)
@@ -49,11 +38,11 @@ struct MainWindowView: View {
         } detail: {
             Group {
                 switch appState.selectedSection {
-                case .memory:   MemoryDashboardPane(appState: appState, recorder: recorder, account: account, settings: settings, store: memoryDashboard)
-                case .flow:     FlowPane(flow: flow)
-                case .library:  LibraryPane(flow: flow)
-                case .settings: SettingsPane(account: account, settings: settings, recorder: recorder, flow: flow)
-                default:        ComingSoonPane(section: appState.selectedSection)
+                case .memory:   MemoryDashboardPane(appState: appState, recorder: recorder, settings: settings, store: memoryDashboard)
+                case .flow:     FlowPane(flow: flow, recorder: recorder, settings: settings)
+                case .library:  LibraryPane(flow: flow, appState: appState, studio: studio)
+                case .studio:   StudioPane(flow: flow, studio: studio)
+                case .settings: SettingsPane(settings: settings, recorder: recorder)
                 }
             }
             .id(appState.selectedSection)

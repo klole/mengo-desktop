@@ -49,11 +49,11 @@ final class FlowController {
         case recorderNotRunning
         case audioPaused
         case runtimeNotFound(SynthesisRuntime)
-        case runtimeMCPNotConfigured(SynthesisRuntime)
+        case ollamaNotInstalled
+        case ollamaModelMissing(String)
     }
 
-    /// Snapshot of the user's entitlement, captured at `save()` time.
-    struct Entitlement { let isPro: Bool; let flowLimit: Int? }
+    enum OllamaReadiness: Equatable { case ready, cliMissing, modelMissing }
 
     private(set) var flowState: FlowState = .idle
     private(set) var library: [FlowEntry] = []
@@ -72,8 +72,7 @@ final class FlowController {
     @ObservationIgnored private let health: FlowPreflightHealth
     @ObservationIgnored private let moments: MomentIndexing
     @ObservationIgnored private let settings: SettingsStore
-    @ObservationIgnored private let entitlement: @MainActor () -> Entitlement
-    @ObservationIgnored private let onFlowLimitReached: @MainActor () -> Void
+    @ObservationIgnored private let ollamaReadiness: @Sendable (String) async -> OllamaReadiness
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let hudShow: (FlowSession, @escaping () -> Void) -> Void
     @ObservationIgnored private let hudHide: () -> Void
@@ -97,8 +96,7 @@ final class FlowController {
          health: FlowPreflightHealth,
          moments: MomentIndexing = NullMomentIndexing(),
          settings: SettingsStore,
-         entitlement: @escaping @MainActor () -> Entitlement = { .init(isPro: true, flowLimit: nil) },
-         onFlowLimitReached: @escaping @MainActor () -> Void = { FlowController.presentDefaultFlowLimitAlert() },
+         ollamaReadiness: @escaping @Sendable (String) async -> OllamaReadiness = { model in await FlowController.liveOllamaReadiness(model: model) },
          now: @escaping () -> Date = Date.init,
          hudShow: @escaping (FlowSession, @escaping () -> Void) -> Void,
          hudHide: @escaping () -> Void,
@@ -115,8 +113,7 @@ final class FlowController {
         self.health = health
         self.moments = moments
         self.settings = settings
-        self.entitlement = entitlement
-        self.onFlowLimitReached = onFlowLimitReached
+        self.ollamaReadiness = ollamaReadiness
         self.now = now
         self.hudShow = hudShow
         self.hudHide = hudHide
@@ -131,7 +128,6 @@ final class FlowController {
     /// Production initializer wired to the live recorder + bundled prompt + discovered runtime executables.
     static func live(recorder: RecorderController,
                      hud: RecordingHUDController,
-                     account: AccountStore,
                      settings: SettingsStore,
                      notify: @escaping (String) -> Void) -> FlowController {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -147,7 +143,6 @@ final class FlowController {
             health: RecorderPreflightHealth(recorder: recorder),
             moments: MemorySearchClient(token: recorder.recorderToken),
             settings: settings,
-            entitlement: { [weak account] in .init(isPro: account?.isPro ?? false, flowLimit: account?.flowLimit) },
             hudShow: { session, onStop in hud.show(session: session, onStop: onStop) },
             hudHide: { hud.hide() },
             notify: notify)
@@ -169,26 +164,43 @@ final class FlowController {
     // MARK: - Preflight
 
     func preflight() async -> PreflightFailure? {
-        let s = await health.snapshot()
-        if !s.healthy { return .recorderNotRunning }
-        if s.audioPaused { return .audioPaused }
-        let runtime = settings.synthesisRuntime
-        guard runtime.isAvailable, let exe = executableOverride(runtime) else { return .runtimeNotFound(runtime) }
-        if await Self.mcpListLacksRecorderEntry(executable: exe, runtime: runtime) { return .runtimeMCPNotConfigured(runtime) }
+        if let failure = await recorderPreflight() { return failure }
+        if let failure = await synthesisPreflight() { return failure }
         return nil
     }
 
-    /// Best-effort: returns true only if `<exe> mcp list` *succeeds* and doesn't
-    /// mention the recorder's MCP entry (literal substring "screenpipe", since that's
-    /// the upstream MCP server's id). If we can't run it, don't block.
-    private static func mcpListLacksRecorderEntry(executable: URL, runtime: SynthesisRuntime) async -> Bool {
-        await Task.detached { () -> Bool in
-            let p = Process(); p.executableURL = executable; p.arguments = runtime.mcpListArguments
+    private func recorderPreflight() async -> PreflightFailure? {
+        let s = await health.snapshot()
+        if !s.healthy { return .recorderNotRunning }
+        if s.audioPaused { return .audioPaused }
+        return nil
+    }
+
+    private func synthesisPreflight() async -> PreflightFailure? {
+        let runtime = settings.synthesisRuntime
+        guard runtime.isAvailable, executableOverride(runtime) != nil else { return .runtimeNotFound(runtime) }
+        if runtime == .ollama {
+            switch await ollamaReadiness(settings.ollamaModel) {
+            case .ready: break
+            case .cliMissing: return .ollamaNotInstalled
+            case .modelMissing: return .ollamaModelMissing(settings.ollamaModel)
+            }
+        }
+        return nil
+    }
+
+    private static func liveOllamaReadiness(model: String) async -> OllamaReadiness {
+        guard let executable = SynthesisRuntime.findOllamaExecutable() else { return .cliMissing }
+        return await Task.detached { () -> OllamaReadiness in
+            let p = Process(); p.executableURL = executable; p.arguments = ["list"]
             let out = Pipe(); p.standardOutput = out; p.standardError = Pipe()
-            guard (try? p.run()) != nil else { return false }
+            guard (try? p.run()) != nil else { return .cliMissing }
             let data = out.fileHandleForReading.readDataToEndOfFile(); p.waitUntilExit()
-            guard p.terminationStatus == 0, let text = String(data: data, encoding: .utf8) else { return false }
-            return runtime.mcpListLacksRecorderEntry(in: text)
+            guard p.terminationStatus == 0, let text = String(data: data, encoding: .utf8) else { return .cliMissing }
+            let names = text.split(separator: "\n").dropFirst().compactMap {
+                $0.split(whereSeparator: { $0.isWhitespace }).first.map(String.init)
+            }
+            return names.contains(model) ? .ready : .modelMissing
         }.value
     }
 
@@ -205,7 +217,7 @@ final class FlowController {
 
     func start() async {
         switch flowState { case .idle, .error: break; default: return }
-        if let failure = await preflight() { onPreflightFailure(failure); return }
+        if let failure = await recorderPreflight() { onPreflightFailure(failure); return }
         let session = FlowSession(mode: .proactive, bufferRangeStart: nil, activeRecordingStart: now(), endTime: nil)
         lastSession = session
         flowState = .recording(session)
@@ -228,7 +240,7 @@ final class FlowController {
     /// is now. On a preflight failure, stay in `.browsingTimeline` (the picker stays open).
     func startRetroactive(bufferStart: Date) async {
         guard case .browsingTimeline = flowState else { return }
-        if let failure = await preflight() { onPreflightFailure(failure); return }
+        if let failure = await recorderPreflight() { onPreflightFailure(failure); return }
         let session = FlowSession(mode: .retroactive, bufferRangeStart: bufferStart, activeRecordingStart: now(), endTime: nil)
         lastSession = session
         flowState = .recording(session)
@@ -274,13 +286,25 @@ final class FlowController {
             flowState = .error("\(runtime.displayName) CLI not found.")
             return
         }
+        if runtime == .ollama {
+            switch await ollamaReadiness(settings.ollamaModel) {
+            case .ready: break
+            case .cliMissing:
+                flowState = .error("Ollama isn't installed. Install Ollama, then choose a local model in Settings.")
+                return
+            case .modelMissing:
+                flowState = .error("Local model ‘\(settings.ollamaModel)’ isn't installed. Run: ollama pull \(settings.ollamaModel)")
+                return
+            }
+        }
         let logURL = Log.synthesisLogURL(id: UUID().uuidString)
         let lastMessageFile = Log.directory.appendingPathComponent("synthesis-last-\(UUID().uuidString).txt")
         let prompt = synthesisPrompt.replacingOccurrences(of: "$MANIFEST_PATH", with: manifestURL.path)
-        let invocation = runtime.invocation(executable: exe, skillsDir: outputDir, prompt: prompt, lastMessageFile: lastMessageFile)
+        let invocation = runtime.invocation(executable: exe, skillsDir: outputDir, prompt: prompt,
+                                            lastMessageFile: lastMessageFile,
+                                            ollamaModel: settings.ollamaModel)
 
-        // ~/.claude/skills/ is behind the runtime's sensitive-file gate. Each runtime's
-        // invocation builder embeds the right bypass flag + --add-dir whitelist.
+        // Each invocation is constrained to the output directory and a pinned recorder MCP.
         // SCREENPIPE_API_KEY: so the recorder MCP child (spawned by the runtime) can authenticate against Mengo's recorder.
         // PATH: a Finder-launched .app has a minimal PATH; prepend common locations so `claude`/`codex`/`npx`/`node` resolve.
         var env = ProcessInfo.processInfo.environment
@@ -336,21 +360,10 @@ final class FlowController {
         flowState = .idle
     }
 
-    /// Apply Review edits and finalize. Renaming re-slugs the directory (collision → `-2` suffix);
-    /// the new name is reflected in the library index. (The in-place SKILL.md rewrite of edited
-    /// name/description/parameters is a follow-up — rename + library update is the critical path.)
+    /// Apply Review edits to SKILL.md + flow.json and finalize. Renaming
+    /// re-slugs the directory (collision → `-2` suffix) and library index.
     func save(name: String, description: String?, parameters: [FlowParameter]) {
         guard case .reviewing(let dir) = flowState else { return }
-        // Gate Free users at the configured flow limit. The current `dir` is the unsaved
-        // synthesis output — `libraryStore` already contains it from `runSynthesis`, plus
-        // any earlier saved flows. The limit applies to the *kept* count (existing on disk).
-        let ent = entitlement()
-        if !ent.isPro, let limit = ent.flowLimit {
-            let kept = libraryStore.load()
-                .filter { $0.slug != dir.lastPathComponent && FileManager.default.fileExists(atPath: $0.path.path) }
-                .count
-            if kept >= limit { onFlowLimitReached(); return }
-        }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let parent = dir.deletingLastPathComponent()
         let siblings = Set((try? FileManager.default.contentsOfDirectory(atPath: parent.path)) ?? [])
@@ -360,6 +373,17 @@ final class FlowController {
         if desiredSlug != dir.lastPathComponent {
             let target = parent.appendingPathComponent(desiredSlug)
             if (try? FileManager.default.moveItem(at: dir, to: target)) != nil { finalDir = target }
+        }
+        do {
+            try SkillFiles.applyReviewEdits(skillDir: finalDir,
+                                            slug: finalDir.lastPathComponent,
+                                            name: trimmed.isEmpty ? finalDir.lastPathComponent : trimmed,
+                                            description: description,
+                                            parameters: parameters)
+        } catch {
+            flowState = .reviewing(finalDir)
+            notify("Couldn't save skill edits: \(error.localizedDescription)")
+            return
         }
         libraryStore.remove(slug: dir.lastPathComponent)
         libraryStore.add(FlowEntry(slug: finalDir.lastPathComponent,
@@ -426,32 +450,20 @@ final class FlowController {
             a.messageText = "\(runtime.displayName) CLI not found"
             let where_ = runtime.executableSearchPaths.joined(separator: ", ")
             a.informativeText = "Install the \(runtime.displayName) CLI, then retry. Flow looked in: \(where_)"
-        case .runtimeMCPNotConfigured(let runtime):
-            a.messageText = "The Mengo MCP isn't set up for \(runtime.displayName)"
-            a.informativeText = "Run this in a terminal, then retry:\n\n\(runtime.mcpAddCommand)"
+        case .ollamaNotInstalled:
+            a.messageText = "Ollama isn't installed"
+            a.informativeText = "Install Ollama from ollama.com, then return to Settings and choose a local model. No account is required."
+        case .ollamaModelMissing(let model):
+            a.messageText = "Local model isn't installed"
+            a.informativeText = "Run this in Terminal, then retry:\n\nollama pull \(model)"
             a.addButton(withTitle: "Copy command"); a.addButton(withTitle: "OK")
             if a.runModal() == .alertFirstButtonReturn {
                 NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(runtime.mcpAddCommand, forType: .string)
+                NSPasteboard.general.setString("ollama pull \(model)", forType: .string)
             }
             return
         }
         a.addButton(withTitle: "OK"); a.runModal()
     }
 
-    /// Default action when a Free user tries to save past their flow limit.
-    /// Opens the upgrade page via the global `AccountStore` (handoff URL).
-    static func presentDefaultFlowLimitAlert() {
-        let a = NSAlert()
-        a.messageText = "You've used all your free flows"
-        a.informativeText = "Upgrade to Mengo Pro for unlimited flows, or delete one from the Library to make room."
-        a.addButton(withTitle: "Upgrade…")
-        a.addButton(withTitle: "Cancel")
-        if a.runModal() == .alertFirstButtonReturn {
-            Task { @MainActor in
-                let url = await AppDelegate.sharedAccount?.webURL(path: "/upgrade") ?? URL(string: "https://mengo.ai/upgrade")!
-                NSWorkspace.shared.open(url)
-            }
-        }
-    }
 }

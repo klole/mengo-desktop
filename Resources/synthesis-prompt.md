@@ -1,4 +1,4 @@
-You are synthesizing a Claude Code skill from a recorded user demonstration.
+You are synthesizing a reusable agent skill from a recorded user demonstration.
 
 The user demonstrated a task on their Mac, narrating aloud what they were
 doing so it could be captured as a reusable skill. Convert the recording
@@ -7,13 +7,9 @@ into a Claude Code skill directory.
 INPUTS:
   - Manifest at: $MANIFEST_PATH
   - The screenpipe MCP tools (mcp__screenpipe__*) for querying the recording.
-    If those tools are unavailable, fall back to the HTTP API at
-    http://127.0.0.1:3030. The /search and /audio endpoints require auth:
-      1. Get the token: `screenpipe auth token` (the binary is at
-         ~/Library/Application Support/ScreenpipeMenu/bin/screenpipe or
-         ~/Applications/ScreenpipeMenu.app/Contents/Helpers/screenpipe).
-      2. Pass it on each request: `curl -H "Authorization: Bearer $TOKEN" ...`
-    /health does NOT require auth.
+    Use only these tools for recorder access. Do not use shell commands, curl,
+    direct HTTP, or credentials. If the MCP tools are unavailable, report a
+    clear failure instead of trying another access path.
 
 PROCESS:
   1. Read $MANIFEST_PATH. Note timeRange and activeRecordingStart.

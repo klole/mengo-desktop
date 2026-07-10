@@ -9,6 +9,13 @@ ScreenpipeFlow.app/
 ScreenpipeFlow.zip
 MengoDesktop.app/
 MengoDesktop.zip
+MengoDesktop.zip.sha256
 *.dSYM
 .DS_Store
 .superpowers/
+.env
+.env.*
+*.p12
+*.pem
+*.key
+*.mobileprovision

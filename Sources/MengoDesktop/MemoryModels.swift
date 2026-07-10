@@ -68,10 +68,12 @@ enum ActivityEvent: Equatable, Sendable, Identifiable {
     }
 }
 
-/// Capture mode for the recorder. Drives the `--fps` flag handed to the
-/// recorder process on start; persisted in `SettingsStore.captureMode`. The
-/// numbers below are conservative defaults — tune once we've validated them
-/// against the bundled recorder build.
+/// Capture mode for the recorder. Persisted in `SettingsStore.captureMode`.
+///
+/// The currently bundled recorder build does not expose a frame-rate or
+/// change-detection CLI knob, so these modes are UI preferences for now and do
+/// not emit process flags. Keep the mapping explicit so we do not accidentally
+/// pass unsupported flags and strand the recorder in an error loop.
 enum CaptureMode: String, CaseIterable, Sendable, Codable {
     case smartCapture   // change-detected captures, low constant cost
     case allChanges     // capture every change at a higher rate
@@ -87,20 +89,14 @@ enum CaptureMode: String, CaseIterable, Sendable, Codable {
 
     var caption: String {
         switch self {
-        case .smartCapture: return "1 fps, change-detected (default)"
-        case .allChanges:   return "2 fps, every visible change"
-        case .periodic:     return "0.5 fps, steady cadence"
+        case .smartCapture: return "Balanced local capture"
+        case .allChanges:   return "Capture preference saved"
+        case .periodic:     return "Capture preference saved"
         }
     }
 
     /// CLI flags appended to the recorder invocation for this mode.
-    var recorderFlags: [String] {
-        switch self {
-        case .smartCapture: return ["--fps", "1.0"]
-        case .allChanges:   return ["--fps", "2.0"]
-        case .periodic:     return ["--fps", "0.5"]
-        }
-    }
+    var recorderFlags: [String] { [] }
 }
 
 // MARK: - Recording schedule

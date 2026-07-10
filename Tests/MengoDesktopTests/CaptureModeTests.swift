@@ -1,22 +1,22 @@
 import XCTest
 @testable import MengoDesktop
 
-/// CaptureMode is a pure value type — its only job is to map a high-level
-/// mode onto a stable set of recorder CLI flags. Test that directly so the
-/// flag table is locked down and accidental regressions show up in CI.
+/// CaptureMode is a pure value type. The bundled recorder currently does not
+/// expose a supported frame-rate flag, so modes must not emit unsupported CLI
+/// arguments.
 @MainActor
 final class CaptureModeTests: XCTestCase {
 
-    func test_smartCapture_setsOneFpsChangeDetected() {
-        XCTAssertEqual(CaptureMode.smartCapture.recorderFlags, ["--fps", "1.0"])
+    func test_smartCapture_emitsNoUnsupportedFlags() {
+        XCTAssertEqual(CaptureMode.smartCapture.recorderFlags, [])
     }
 
-    func test_allChanges_setsTwoFps() {
-        XCTAssertEqual(CaptureMode.allChanges.recorderFlags, ["--fps", "2.0"])
+    func test_allChanges_emitsNoUnsupportedFlags() {
+        XCTAssertEqual(CaptureMode.allChanges.recorderFlags, [])
     }
 
-    func test_periodic_setsHalfFps() {
-        XCTAssertEqual(CaptureMode.periodic.recorderFlags, ["--fps", "0.5"])
+    func test_periodic_emitsNoUnsupportedFlags() {
+        XCTAssertEqual(CaptureMode.periodic.recorderFlags, [])
     }
 
     func test_persistsAndRestoresFromUserDefaults() {

@@ -26,7 +26,7 @@ enum SkillFiles {
         var inDesc = false
         for raw in fm {
             if let r = raw.range(of: #"^\s*name\s*:\s*"#, options: .regularExpression) {
-                name = String(raw[r.upperBound...]).trimmingCharacters(in: .whitespaces); inDesc = false
+                name = decodedScalar(String(raw[r.upperBound...]).trimmingCharacters(in: .whitespaces)); inDesc = false
             } else if let r = raw.range(of: #"^\s*description\s*:\s*"#, options: .regularExpression) {
                 descParts = [String(raw[r.upperBound...]).trimmingCharacters(in: .whitespaces)]; inDesc = true
             } else if inDesc, raw.first == " " || raw.first == "\t" {
@@ -36,8 +36,15 @@ enum SkillFiles {
             }
         }
         let body = String(lines[(closeIdx + 1)...].joined(separator: "\n").drop(while: { $0 == "\n" }))
-        let desc = descParts.isEmpty ? nil : descParts.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+        let desc = descParts.isEmpty ? nil : decodedScalar(descParts.joined(separator: " ").trimmingCharacters(in: .whitespaces))
         return (name, ((desc?.isEmpty ?? true) ? nil : desc), body)
+    }
+
+    private static func decodedScalar(_ value: String) -> String {
+        guard value.first == "\"", value.last == "\"",
+              let data = value.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(String.self, from: data) else { return value }
+        return decoded
     }
 
     private struct FlowJSON: Decodable {
@@ -62,5 +69,89 @@ enum SkillFiles {
             let intent = s.intent ?? "(step)"
             return (s.inferred == true) ? "\(n). \(intent)  (inferred — verify)" : "\(n). \(intent)"
         }
+    }
+
+    /// Applies the edits from the Review screen to both canonical skill files.
+    /// Unknown flow.json fields survive through `FlowDocument`'s round-trip.
+    static func applyReviewEdits(skillDir: URL,
+                                 slug: String,
+                                 name: String,
+                                 description: String?,
+                                 parameters: [FlowParameter]) throws {
+        let flowURL = skillDir.appendingPathComponent("flow.json")
+        var document = try FlowDocument.load(from: flowURL)
+        document.slug = slug
+        document.name = name
+        document.flowDescription = description ?? ""
+
+        let existingByName = Dictionary(uniqueKeysWithValues: document.parameters.map { ($0.name, $0) })
+        document.parameters = parameters.map { edited in
+            var parameter = existingByName[edited.name] ?? FlowDocument.Parameter(
+                name: edited.name, type: "string", description: edited.description,
+                defaultValue: nil, autoDetected: edited.autoDetected)
+            parameter.name = edited.name
+            parameter.description = edited.description
+            parameter.autoDetected = edited.autoDetected
+            if let value = edited.defaultValue { parameter.setDefaultFromText(value) }
+            else { parameter.defaultValue = nil }
+            return parameter
+        }
+        try document.save(to: flowURL)
+
+        let skillURL = skillDir.appendingPathComponent("SKILL.md")
+        let current = try String(contentsOf: skillURL, encoding: .utf8)
+        let parsed = parseSkillMarkdown(current)
+        let body = replacingParametersSection(in: parsed.body, parameters: parameters)
+        let markdown = """
+        ---
+        name: \(yamlQuoted(name))
+        description: \(yamlQuoted(description ?? ""))
+        ---
+
+        \(body)
+        """
+        try markdown.write(to: skillURL, atomically: true, encoding: .utf8)
+    }
+
+    private static func replacingParametersSection(in body: String,
+                                                    parameters: [FlowParameter]) -> String {
+        var lines = body.components(separatedBy: "\n")
+        let section = parameterSection(parameters).components(separatedBy: "\n")
+        if let start = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces) == "## Parameters" }) {
+            let end = lines[(start + 1)...].firstIndex(where: {
+                $0.trimmingCharacters(in: .whitespaces).hasPrefix("## ")
+            }) ?? lines.endIndex
+            lines.replaceSubrange(start..<end, with: section + [""])
+        } else if let steps = lines.firstIndex(where: {
+            $0.trimmingCharacters(in: .whitespaces) == "## Steps"
+        }) {
+            lines.insert(contentsOf: section + [""], at: steps)
+        } else {
+            if lines.last?.isEmpty == false { lines.append("") }
+            lines.append(contentsOf: section)
+        }
+        return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines) + "\n"
+    }
+
+    private static func parameterSection(_ parameters: [FlowParameter]) -> String {
+        guard !parameters.isEmpty else { return "## Parameters\n\nNone." }
+        let rows = parameters.map { parameter in
+            var detail = parameter.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if let value = parameter.defaultValue, !value.isEmpty {
+                detail += detail.isEmpty ? "Default: `\(markdownEscaped(value))`." : " Default: `\(markdownEscaped(value))`."
+            }
+            return "- `{{\(markdownEscaped(parameter.name))}}`" + (detail.isEmpty ? "" : ": \(detail)")
+        }
+        return "## Parameters\n\n" + rows.joined(separator: "\n")
+    }
+
+    private static func yamlQuoted(_ value: String) -> String {
+        guard let data = try? JSONEncoder().encode(value),
+              let quoted = String(data: data, encoding: .utf8) else { return "\"\"" }
+        return quoted
+    }
+
+    private static func markdownEscaped(_ value: String) -> String {
+        value.replacingOccurrences(of: "`", with: "\\`")
     }
 }

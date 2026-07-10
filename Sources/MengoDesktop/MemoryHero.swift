@@ -16,8 +16,6 @@ struct MemoryHero: View {
     var onShowAdvancedSources: () -> Void = {}
     var onShowSettings: () -> Void = {}
 
-    @State private var pulsing = false
-
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             pageHeader
@@ -89,7 +87,7 @@ struct MemoryHero: View {
 
     @ViewBuilder private var heroCard: some View {
         HStack(alignment: .top, spacing: 24) {
-            orb
+            MengoMemoryOrb(isRecording: orbIsRecording)
             VStack(alignment: .leading, spacing: 6) {
                 Text(statusWord).font(Theme.largeTitle).foregroundStyle(Theme.primaryText)
                 Text(statusSubtitle).font(Theme.body).foregroundStyle(Theme.secondaryText)
@@ -103,35 +101,6 @@ struct MemoryHero: View {
             RoundedRectangle(cornerRadius: 18).fill(Theme.cardBackground2)
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.separator, lineWidth: 1))
         )
-    }
-
-    @ViewBuilder private var orb: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Theme.orbCore, Theme.orbMid, Theme.orbEdge],
-                        center: .init(x: 0.4, y: 0.35),
-                        startRadius: 4,
-                        endRadius: 80
-                    )
-                )
-                .overlay(
-                    Circle().stroke(
-                        AngularGradient(
-                            colors: [Theme.orbMid, Theme.accent, Theme.orbMid],
-                            center: .center
-                        ),
-                        lineWidth: 1
-                    ).blur(radius: 0.5)
-                )
-                .shadow(color: Theme.orbGlow, radius: pulsing ? 40 : 22)
-                .scaleEffect(pulsing ? 1.04 : 0.96)
-        }
-        .frame(width: 132, height: 132)
-        .onAppear { pulsing = recorder.status.isRecording }
-        .onChange(of: recorder.status) { _, newValue in pulsing = newValue.isRecording }
-        .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: pulsing)
     }
 
     // MARK: - Info pills row
@@ -205,9 +174,8 @@ struct MemoryHero: View {
             ForEach(CaptureMode.allCases, id: \.self) { mode in
                 Button {
                     settings.captureMode = mode
-                    // Restart the recorder if it's currently running so the new
-                    // --fps takes effect immediately. (applyRecordingSources
-                    // rebuilds args + restarts in one shot.)
+                    // Restart the recorder if it's currently running so future
+                    // supported capture-mode flags can take effect immediately.
                     if recorder.status.isRecording {
                         Task { await recorder.applyRecordingSources() }
                     }
@@ -307,11 +275,21 @@ struct MemoryHero: View {
         }
     }
 
+    private var orbIsRecording: Bool {
+        switch recorder.status {
+        case .recording, .audioPaused, .screenPaused:
+            return true
+        case .idle, .starting, .bothPaused, .error:
+            return false
+        }
+    }
+
     // MARK: - Primary button
 
     private var primaryButtonLabel: String {
         switch recorder.status {
-        case .idle, .error:                          return "Start Watching"
+        case .idle:                                  return "Start Watching"
+        case .error:                                 return "Retry"
         case .starting:                              return "Starting…"
         case .recording:                             return "Stop Watching"
         case .audioPaused, .screenPaused, .bothPaused: return "Resume"
@@ -322,16 +300,180 @@ struct MemoryHero: View {
         switch recorder.status {
         case .recording: return "stop.fill"
         case .audioPaused, .screenPaused, .bothPaused: return "play.fill"
+        case .error: return "arrow.clockwise"
         default: return "record.circle"
         }
     }
 
     private func togglePrimaryAction() async {
         switch recorder.status {
-        case .idle, .error:                              await recorder.start()
+        case .idle:                                      await recorder.start()
+        case .error:                                     await recorder.restartAfterCrash()
         case .recording:                                 recorder.stop()
         case .audioPaused, .screenPaused, .bothPaused:   await recorder.resumeAll()
         case .starting:                                  break
         }
+    }
+}
+
+private struct MengoMemoryOrb: View {
+    let isRecording: Bool
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let breath = isRecording
+                ? 1.0 + 0.035 * sin(t * 2.4)
+                : 0.985 + 0.012 * sin(t * 0.9)
+            let glow = isRecording
+                ? 34 + 12 * (sin(t * 2.2) + 1) / 2
+                : 15 + 4 * (sin(t * 0.8) + 1) / 2
+            let shimmerX = 0.32 + 0.18 * sin(t * 1.1)
+            let shimmerY = 0.30 + 0.08 * cos(t * 0.9)
+            let rotation = Angle.degrees(isRecording ? t * 28 : t * 5)
+
+            ZStack {
+                if isRecording {
+                    activeCorona(rotation: rotation, t: t)
+                } else {
+                    dormantHalo(rotation: rotation)
+                }
+
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Theme.orbCore,
+                                Theme.orbMid,
+                                Theme.orbEdge
+                            ],
+                            center: .init(x: shimmerX, y: shimmerY),
+                            startRadius: 5,
+                            endRadius: 84
+                        )
+                    )
+                    .overlay(surfaceSheen(t: t).clipShape(Circle()))
+                    .overlay(innerShadow)
+                    .overlay(rimStroke(rotation: rotation))
+                    .shadow(color: Theme.orbGlow.opacity(isRecording ? 1.0 : 0.55), radius: glow)
+                    .scaleEffect(breath)
+            }
+            .frame(width: 132, height: 132)
+            .animation(.easeInOut(duration: 0.45), value: isRecording)
+        }
+    }
+
+    private func activeCorona(rotation: Angle, t: TimeInterval) -> some View {
+        ZStack {
+            Circle()
+                .stroke(
+                    AngularGradient(
+                        colors: [
+                            .clear,
+                            Theme.accent.opacity(0.10),
+                            Theme.orbCore.opacity(0.72),
+                            Theme.accent.opacity(0.18),
+                            .clear,
+                            Theme.orbCore.opacity(0.45),
+                            .clear
+                        ],
+                        center: .center
+                    ),
+                    lineWidth: 5
+                )
+                .blur(radius: 0.7)
+                .rotationEffect(rotation)
+                .scaleEffect(1.08)
+
+            Circle()
+                .stroke(Theme.accent.opacity(0.12 + 0.08 * (sin(t * 2.0) + 1) / 2), lineWidth: 13)
+                .blur(radius: 8)
+                .scaleEffect(1.12)
+        }
+    }
+
+    private func dormantHalo(rotation: Angle) -> some View {
+        Circle()
+            .stroke(
+                AngularGradient(
+                    colors: [
+                        Theme.orbMid.opacity(0.28),
+                        Theme.orbCore.opacity(0.12),
+                        Theme.orbEdge.opacity(0.0),
+                        Theme.orbMid.opacity(0.22)
+                    ],
+                    center: .center
+                ),
+                lineWidth: 2
+            )
+            .rotationEffect(rotation)
+            .scaleEffect(1.03)
+            .blur(radius: 0.5)
+    }
+
+    private func surfaceSheen(t: TimeInterval) -> some View {
+        let offset = isRecording ? 18 * sin(t * 1.25) : 6 * sin(t * 0.55)
+        return ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(isRecording ? 0.23 : 0.14),
+                            Theme.orbCore.opacity(isRecording ? 0.18 : 0.08),
+                            .clear
+                        ],
+                        center: .init(x: 0.34, y: 0.28),
+                        startRadius: 0,
+                        endRadius: 48
+                    )
+                )
+                .offset(x: offset, y: -offset * 0.35)
+
+            LinearGradient(
+                colors: [
+                    .clear,
+                    .white.opacity(isRecording ? 0.11 : 0.035),
+                    .clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .rotationEffect(.degrees(-18))
+            .offset(x: isRecording ? 44 * sin(t * 1.15) : -24)
+            .blendMode(.screen)
+        }
+    }
+
+    private var innerShadow: some View {
+        Circle()
+            .stroke(
+                LinearGradient(
+                    colors: [
+                        .white.opacity(0.10),
+                        .clear,
+                        .black.opacity(0.34)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 2
+            )
+    }
+
+    private func rimStroke(rotation: Angle) -> some View {
+        Circle()
+            .stroke(
+                AngularGradient(
+                    colors: [
+                        Theme.orbEdge.opacity(0.25),
+                        Theme.accent.opacity(isRecording ? 0.92 : 0.48),
+                        Theme.orbCore.opacity(isRecording ? 0.65 : 0.28),
+                        Theme.orbEdge.opacity(0.35)
+                    ],
+                    center: .center
+                ),
+                lineWidth: isRecording ? 1.6 : 1.1
+            )
+            .rotationEffect(rotation)
     }
 }

@@ -5,6 +5,8 @@ import SwiftUI
 /// the Flow tab in its reviewing state.
 struct LibraryPane: View {
     let flow: FlowController
+    let appState: AppState
+    let studio: StudioController
     @State private var pendingDelete: FlowEntry?
 
     private static let dateFmt: DateFormatter = {
@@ -57,6 +59,13 @@ struct LibraryPane: View {
             Spacer(minLength: 8)
             // Compact icon actions (with tooltips) — keeps rows narrow so the window stays freely resizable.
             if entry.exists {
+                Button {
+                    // Queue the request; StudioPane drains via `pendingOpen`
+                    // so the dirty-discard alert fires for in-progress edits.
+                    studio.pendingOpen = entry
+                    appState.selectedSection = .studio
+                } label: { Image(systemName: "point.3.connected.trianglepath.dotted") }
+                    .help("Edit in Studio").buttonStyle(.plain).foregroundStyle(Theme.accent)
                 Button { flow.reopenInReview(slug: entry.slug) } label: { Image(systemName: "square.and.pencil") }
                     .help("Re-open in Review").buttonStyle(.plain).foregroundStyle(Theme.accent)
                 Button { NSWorkspace.shared.activateFileViewerSelecting([entry.path]) } label: { Image(systemName: "folder") }

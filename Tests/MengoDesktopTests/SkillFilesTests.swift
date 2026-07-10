@@ -51,4 +51,49 @@ final class SkillFilesTests: XCTestCase {
         XCTAssertEqual(SkillFiles.parseFlowParameters(Data("nope".utf8)).count, 0)
         XCTAssertEqual(SkillFiles.parseFlowStepSummaries(Data("nope".utf8)).count, 0)
     }
+
+    func test_applyReviewEdits_updatesBothFiles_andPreservesUnknownJSON() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("skill-files-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try """
+        ---
+        name: old-name
+        description: Old description
+        ---
+
+        ## Intent
+
+        Keep this body.
+
+        ## Parameters
+
+        None.
+
+        ## Steps
+
+        1. Keep this step.
+        """.write(to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        try #"{"schemaVersion":1,"slug":"old-name","name":"Old","description":"Old description","custom":{"keep":true},"parameters":[],"steps":[]}"#
+            .write(to: dir.appendingPathComponent("flow.json"), atomically: true, encoding: .utf8)
+
+        try SkillFiles.applyReviewEdits(
+            skillDir: dir, slug: "new-name", name: "New Name", description: "Use it safely",
+            parameters: [.init(name: "channel", description: "Destination", defaultValue: "general", autoDetected: false)])
+
+        let markdown = try String(contentsOf: dir.appendingPathComponent("SKILL.md"), encoding: .utf8)
+        let parsed = SkillFiles.parseSkillMarkdown(markdown)
+        XCTAssertEqual(parsed.name, "New Name")
+        XCTAssertEqual(parsed.description, "Use it safely")
+        XCTAssertTrue(parsed.body.contains("Keep this body."))
+        XCTAssertTrue(parsed.body.contains("`{{channel}}`: Destination Default: `general`."))
+
+        let document = try FlowDocument.load(from: dir.appendingPathComponent("flow.json"))
+        XCTAssertEqual(document.slug, "new-name")
+        XCTAssertEqual(document.name, "New Name")
+        XCTAssertEqual(document.parameters.first?.name, "channel")
+        guard case .object(let root) = document.toJSON(),
+              case .object(let custom)? = root["custom"] else { return XCTFail("missing custom field") }
+        XCTAssertEqual(custom["keep"], .bool(true))
+    }
 }

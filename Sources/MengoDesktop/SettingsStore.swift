@@ -28,6 +28,9 @@ final class SettingsStore {
     var synthesisRuntime: SynthesisRuntime {
         didSet { defaults.set(synthesisRuntime.rawValue, forKey: Keys.runtime) }
     }
+    var ollamaModel: String {
+        didSet { defaults.set(ollamaModel, forKey: Keys.ollamaModel) }
+    }
     var startRecordingOnLaunch: Bool {
         didSet { defaults.set(startRecordingOnLaunch, forKey: Keys.startRec) }
     }
@@ -53,6 +56,7 @@ final class SettingsStore {
 
     private enum Keys {
         static let runtime = "synthesisRuntime"
+        static let ollamaModel = "ollamaModel"
         static let startRec = "startRecordingOnLaunch"
         static let topAppsWindow = "topAppsWindow"
         static let captureMode = "captureMode"
@@ -63,7 +67,8 @@ final class SettingsStore {
     init(defaults: UserDefaults = .standard, loginItem: LoginItemControlling = SMLoginItem()) {
         self.defaults = defaults
         self.loginItem = loginItem
-        self.synthesisRuntime = (defaults.string(forKey: Keys.runtime)).flatMap(SynthesisRuntime.init(rawValue:)) ?? .claudeCode
+        self.synthesisRuntime = (defaults.string(forKey: Keys.runtime)).flatMap(SynthesisRuntime.init(rawValue:)) ?? .ollama
+        self.ollamaModel = defaults.string(forKey: Keys.ollamaModel) ?? SynthesisRuntime.defaultOllamaModel
         self.startRecordingOnLaunch = defaults.object(forKey: Keys.startRec) as? Bool ?? true
         self.topAppsWindow = (defaults.string(forKey: Keys.topAppsWindow)).flatMap(TopAppsWindow.init(rawValue:)) ?? .today
         self.captureMode = (defaults.string(forKey: Keys.captureMode)).flatMap(CaptureMode.init(rawValue:)) ?? .smartCapture

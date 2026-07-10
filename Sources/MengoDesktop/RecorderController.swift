@@ -227,8 +227,10 @@ final class RecorderController {
             else { for name in audioNames { args += ["--audio-device", name] } }
         }
 
-        // Capture-mode flags (--fps + variants). Comes from SettingsStore in
-        // production; defaults to .smartCapture in tests that don't wire it.
+        // Capture-mode flags. Comes from SettingsStore in production; defaults
+        // to .smartCapture in tests that don't wire it. The current bundled
+        // recorder exposes no supported FPS/change-detection flags, so this is
+        // intentionally empty until the helper gains a real knob.
         args += captureModeProvider().recorderFlags
 
         return (args, resolvedMonitorIDs, audioNames, audioDisabled)

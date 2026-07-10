@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Five tiles below the Sessions / Top Apps row. Routes are external —
+/// Four tiles below the Sessions / Top Apps row. Routes are external —
 /// the dashboard pane supplies callbacks so this view stays free of
 /// AppState / FlowController / NSWorkspace coupling.
 struct QuickActionsRow: View {
@@ -8,7 +8,6 @@ struct QuickActionsRow: View {
     var onCreateFlow: () -> Void
     var onTrainSkill: () -> Void
     var onOpenStudio: () -> Void
-    var onImportWorkflow: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -20,8 +19,6 @@ struct QuickActionsRow: View {
                  caption: "Teach Mengo a skill",     action: onTrainSkill)
             tile(systemImage: "rectangle.connected.to.line.below", title: "Open Studio",
                  caption: "Edit your skills",        action: onOpenStudio)
-            tile(systemImage: "square.and.arrow.down", title: "Import Workflow",
-                 caption: "Bring in existing flow",  action: onImportWorkflow)
         }
     }
 

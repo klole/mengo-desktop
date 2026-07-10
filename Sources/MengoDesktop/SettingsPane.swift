@@ -1,20 +1,14 @@
 import SwiftUI
 import AppKit
 
-/// The Settings pane. Replaces the placeholder for `.settings` in `MainWindowView`.
-/// Sections: Account / Synthesis model / Startup / Logs & data. Dark/orange palette
-/// like the other panes; wrapped in a `ScrollView` so the window stays freely resizable.
+/// Settings for synthesis, startup behavior, logs, and local app data.
 struct SettingsPane: View {
-    let account: AccountStore
     let settings: SettingsStore
     let recorder: RecorderController
-    let flow: FlowController
-    @State private var refreshing = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                accountSection
                 synthesisSection
                 startupSection
                 logsSection
@@ -23,57 +17,6 @@ struct SettingsPane: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(LinearGradient(colors: [Theme.paneBackground, Theme.windowBackground], startPoint: .top, endPoint: .bottom))
-    }
-
-    // MARK: Account
-
-    @ViewBuilder private var accountSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Account").font(Theme.headline).foregroundStyle(Theme.primaryText)
-            if let a = account.account {
-                HStack(spacing: 10) {
-                    Text(a.email).font(Theme.body).foregroundStyle(Theme.secondaryText)
-                    planBadge(a.plan)
-                }
-                if a.plan == .free {
-                    let used = flow.library.filter(\.exists).count
-                    let limit = account.flowLimit ?? 3
-                    Text("\(used) of \(limit) flows used").font(Theme.caption).foregroundStyle(Theme.mutedText)
-                    Button("Upgrade to Pro") {
-                        Task { NSWorkspace.shared.open(await account.webURL(path: "/upgrade")) }
-                    }
-                    .buttonStyle(.borderedProminent).tint(Theme.accent)
-                } else {
-                    Button("Manage account") {
-                        Task { NSWorkspace.shared.open(await account.webURL(path: "/account")) }
-                    }
-                    .buttonStyle(.bordered)
-                }
-                HStack(spacing: 10) {
-                    Button("Refresh now") {
-                        refreshing = true
-                        Task { await account.refresh(); refreshing = false }
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(refreshing)
-                    if refreshing { ProgressView().controlSize(.small) }
-                }
-                Button("Sign out") { account.signOut() }
-                    .buttonStyle(.plain).foregroundStyle(Theme.stopped)
-            } else {
-                Text("Not signed in.").font(Theme.body).foregroundStyle(Theme.secondaryText)
-            }
-        }
-    }
-
-    @ViewBuilder private func planBadge(_ plan: Plan) -> some View {
-        Text(plan == .pro ? "Pro" : "Free")
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 8).padding(.vertical, 2)
-            .background(
-                Capsule().fill(plan == .pro ? Theme.accent : Theme.elevatedBackground)
-            )
-            .foregroundStyle(plan == .pro ? Color.white : Theme.secondaryText)
     }
 
     // MARK: Synthesis model
@@ -86,16 +29,27 @@ struct SettingsPane: View {
                     runtimeRow(runtime)
                 }
             }
-            Text("Mengo Flow uses this to turn recordings into reusable skills. Claude Code and Codex are configured automatically, and the Mengo MCP is wired into whichever you pick.")
+            if settings.synthesisRuntime == .ollama {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Ollama model").font(Theme.caption).foregroundStyle(Theme.secondaryText)
+                    TextField("gpt-oss:20b", text: Binding(
+                        get: { settings.ollamaModel },
+                        set: { settings.ollamaModel = $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                    Text("No account is required. Use a tool-capable model; Mengo recommends `gpt-oss:20b`. Install it with `ollama pull \(settings.ollamaModel)`.")
+                        .font(Theme.caption).foregroundStyle(Theme.mutedText)
+                }
+            }
+            Text("Mengo Flow uses the selected runtime to turn recordings into reusable skills. Ollama stays local; Claude Code and Codex use their respective cloud accounts.")
                 .font(Theme.caption).foregroundStyle(Theme.mutedText)
         }
     }
 
     @ViewBuilder private func runtimeRow(_ runtime: SynthesisRuntime) -> some View {
         let selected = settings.synthesisRuntime == runtime
-        let disabled = !runtime.isAvailable
         Button {
-            if !disabled { settings.synthesisRuntime = runtime }
+            settings.synthesisRuntime = runtime
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: selected ? "largecircle.fill.circle" : "circle")
@@ -103,10 +57,7 @@ struct SettingsPane: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(runtime.displayName)
                         .font(Theme.body)
-                        .foregroundStyle(disabled ? Theme.mutedText : Theme.primaryText)
-                    if let note = runtime.comingSoonNote {
-                        Text(note).font(Theme.caption).foregroundStyle(Theme.mutedText)
-                    }
+                        .foregroundStyle(Theme.primaryText)
                 }
                 Spacer(minLength: 0)
             }
@@ -118,7 +69,6 @@ struct SettingsPane: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(disabled)
     }
 
     // MARK: Startup
@@ -137,13 +87,6 @@ struct SettingsPane: View {
                    isOn: Binding(get: { settings.startRecordingOnLaunch },
                                  set: { settings.startRecordingOnLaunch = $0 }))
                 .toggleStyle(.switch).tint(Theme.accent)
-            Toggle("Generate insight summaries with AI",
-                   isOn: Binding(get: { settings.aiInsightsEnabled },
-                                 set: { settings.aiInsightsEnabled = $0 }))
-                .toggleStyle(.switch).tint(Theme.accent)
-            Text("Uses your Claude Code / Codex CLI to polish the Memory Dashboard's Mengo Insights cards. Runs at most every 10 minutes; cached to disk between refreshes.")
-                .font(Theme.caption).foregroundStyle(Theme.mutedText)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

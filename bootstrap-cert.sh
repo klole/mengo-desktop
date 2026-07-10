@@ -2,17 +2,17 @@
 # bootstrap-cert.sh
 #
 # One-time setup: creates a self-signed code-signing certificate in your login
-# keychain. build.sh then uses it instead of ad-hoc signing, which means the
+# keychain. build-mengo.sh then uses it instead of ad-hoc signing, which means the
 # .app gets a STABLE signing identity across rebuilds — macOS no longer treats
 # every rebuild as a new app and won't prompt for Screen Recording / Microphone
 # permission again.
 #
-# This is local-developer only. Coworkers don't run this; they consume the
-# pre-built .zip which carries your signature.
+# This is local-developer only. Release users consume the Developer ID signed
+# and notarized archive instead.
 
 set -euo pipefail
 
-CERT_NAME="ScreenpipeMenu Local Dev"
+CERT_NAME="Mengo Desktop Local Dev"
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
 
 # Already exists?
@@ -63,9 +63,9 @@ echo
 echo "✓ Done. Verify with:"
 echo "    security find-identity -v -p codesigning"
 echo
-echo "Then rebuild: ./build.sh"
+echo "Then rebuild: ./build-mengo.sh"
 echo
-echo "Note: this cert isn't system-trusted (that would need sudo). For our purposes —"
+echo "Note: this cert isn't system-trusted (that would need sudo). For local development —"
 echo "stable codesign identity so macOS TCC doesn't reset Screen Recording grants on"
 echo "every rebuild — trust isn't required. Gatekeeper will still treat the .app like"
-echo "an unsigned one, which is fine since coworkers right-click → Open anyway."
+echo "an unsigned one. Public releases must use scripts/release-mengo.sh instead."

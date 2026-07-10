@@ -12,17 +12,19 @@ final class SettingsStoreTests: XCTestCase {
     }
     func test_defaults() {
         let s = SettingsStore(defaults: defaults(), loginItem: StubLoginItem())
-        XCTAssertEqual(s.synthesisRuntime, .claudeCode)
+        XCTAssertEqual(s.synthesisRuntime, .ollama)
+        XCTAssertEqual(s.ollamaModel, SynthesisRuntime.defaultOllamaModel)
         XCTAssertTrue(s.startRecordingOnLaunch)
         XCTAssertFalse(s.openAtLogin)
     }
     func test_persistsRuntimeAndStartFlag() {
         let d = defaults()
         let s1 = SettingsStore(defaults: d, loginItem: StubLoginItem())
-        s1.synthesisRuntime = .codex; s1.startRecordingOnLaunch = false
+        s1.synthesisRuntime = .codex; s1.startRecordingOnLaunch = false; s1.ollamaModel = "qwen3.5:27b"
         let s2 = SettingsStore(defaults: d, loginItem: StubLoginItem())
         XCTAssertEqual(s2.synthesisRuntime, .codex)
         XCTAssertFalse(s2.startRecordingOnLaunch)
+        XCTAssertEqual(s2.ollamaModel, "qwen3.5:27b")
     }
     func test_openAtLogin_togglesBackend() {
         let li = StubLoginItem()

@@ -14,24 +14,12 @@ final class SidebarSectionTests: XCTestCase {
         for section in SidebarSection.allCases {
             XCTAssertFalse(section.displayName.isEmpty, "\(section): displayName")
             XCTAssertFalse(section.systemImage.isEmpty, "\(section): systemImage")
-            XCTAssertFalse(section.comingSoonBlurb.isEmpty, "\(section): comingSoonBlurb")
         }
     }
 
-    func test_everyCase_targetsAPhaseBetween2And5() {
+    func test_noSectionCarriesAPaidBadge() {
         for section in SidebarSection.allCases {
-            XCTAssertTrue((2...5).contains(section.phase),
-                          "\(section): phase \(section.phase) out of range")
-        }
-    }
-
-    func test_onlyStudioCarriesAProBadge() {
-        for section in SidebarSection.allCases {
-            if section == .studio {
-                XCTAssertEqual(section.badge, "Pro")
-            } else {
-                XCTAssertNil(section.badge, "\(section) should have no badge")
-            }
+            XCTAssertNil(section.badge, "\(section) should have no badge")
         }
     }
 
